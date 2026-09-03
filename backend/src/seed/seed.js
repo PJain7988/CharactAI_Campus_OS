@@ -76,6 +76,29 @@ function buildActivityPlan() {
     });
 
   // Year 1 (~14 activities)
+  // === USER EXACT 20 ACTIVITIES LIST ===
+  push(1, 'classroom',  'Attending classes', null, 'Completed', '2023-08-10', 80, { attendancePercent: 95, participationType: 'Regular attendance' });
+  push(1, 'academic',   'Studying', null, 'Completed', '2023-08-15', 50);
+  push(1, 'library',    'Visiting the library', null, null, '2023-08-18', 2, { visitPurpose: 'study' });
+  push(1, 'library',    'Reading books', null, null, '2023-08-20', 3, { bookTitle: 'Clean Code', pagesRead: 50 });
+  push(1, 'technical',  'Participating in technical events', 'Participant', 'Participant', '2023-08-25');
+  push(1, 'sports',     'Playing sports', 'Player', null, '2023-09-01', 10, { sport: 'Badminton' });
+  push(1, 'leadership', 'Joining clubs', 'Member', null, '2023-09-05');
+  push(1, 'cultural',   'Participating in cultural events', 'Participant', null, '2023-09-10');
+  push(1, 'learning',   'Attending workshops', null, 'Completed', '2023-09-15');
+  push(1, 'technical',  'Participating in hackathons', 'Participant', 'Finalist', '2023-09-20');
+  push(1, 'social',     'Volunteering', 'Volunteer', null, '2023-09-25', 10, { organization: 'NGO' });
+  push(1, 'events',     'Organizing events', 'Organizer', 'Completed', '2023-10-01');
+  push(1, 'leadership', 'Taking leadership roles', 'Coordinator', null, '2023-10-05');
+  push(1, 'technical',  'Working on projects', 'Developer', 'Completed', '2023-10-10');
+  push(1, 'learning',   'Completing certifications', null, 'Completed', '2023-10-15');
+  push(1, 'events',     'Participating in competitions', 'Competitor', 'Runner-up', '2023-10-20');
+  push(1, 'teamwork',   'Helping peers', 'Mentor', null, '2023-10-25');
+  push(1, 'learning',   'Attending seminars', null, 'Completed', '2023-10-30');
+  push(1, 'technical',  'Doing internships', 'Intern', 'Completed', '2023-11-05', 160);
+  push(1, 'academic',   'Conducting research', 'Researcher', 'Published', '2023-11-10');
+  // =====================================
+
   push(1, 'academic', 'Semester 1 Assignments Completed', null, 'Completed', '2023-11-10');
   push(1, 'academic', 'Semester 1 Internal Assessment', null, 'Completed', '2023-12-05');
   // Library visits with book metadata
@@ -106,8 +129,6 @@ function buildActivityPlan() {
   push(1, 'social', 'Campus Cleanliness Drive', 'Volunteer', null, '2023-10-02');
   push(1, 'teamwork', 'Group Assignment — Database Basics', 'Team Member', null, '2023-11-18');
   push(1, 'academic', 'Semester 2 Assignments Completed', null, 'Completed', '2024-03-10');
-  push(1, 'library', 'Library Visit — Clean Code by Robert Martin', null, null, '2024-01-15', 2,
-    { bookTitle: 'Clean Code', author: 'Robert C. Martin', topic: 'Software Engineering', pagesRead: 100, visitPurpose: 'personal growth' });
   push(1, 'learning', 'Web Development Basics Workshop', null, 'Completed', '2024-02-10');
 
   // Year 2 (~30 activities)

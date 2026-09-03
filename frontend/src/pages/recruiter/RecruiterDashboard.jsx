@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import api from '../../api/client';
 import Badge from '../../components/Badge';
 import { motion, AnimatePresence } from 'framer-motion';
-import { BrainCircuit, Sparkles, Building2, UserCircle, Briefcase, FileText, Bot, Cpu, CheckCircle2, AlertCircle, PlayCircle, ChevronRight } from 'lucide-react';
+import { BrainCircuit, Sparkles, Building2, UserCircle, Briefcase, FileText, Bot, Cpu, CheckCircle2, AlertCircle, PlayCircle, ChevronRight, Search } from 'lucide-react';
 
 export default function RecruiterDashboard() {
   const [jobs, setJobs] = useState([]);
@@ -11,6 +11,9 @@ export default function RecruiterDashboard() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [showNewJob, setShowNewJob] = useState(false);
+  const [ragQuery, setRagQuery] = useState('');
+  const [ragResults, setRagResults] = useState([]);
+  const [ragBusy, setRagBusy] = useState(false);
   const [interview, setInterview] = useState(null); // { interviewId, questions, studentId }
   const [answers, setAnswers] = useState({});
   const [answerResults, setAnswerResults] = useState({});
@@ -93,6 +96,20 @@ export default function RecruiterDashboard() {
   };
 
   const selectedJob = jobs.find(j => j.id === selectedJobId);
+
+  const handleRagSearch = async (e) => {
+    e.preventDefault();
+    if (!ragQuery.trim()) return;
+    setRagBusy(true);
+    try {
+      const { data } = await api.post('/recruitment/rag-search', { query: ragQuery });
+      setRagResults(data.results);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setRagBusy(false);
+    }
+  };
 
   if (interview) {
     const q = interview.questions[activeQuestion];
@@ -229,6 +246,48 @@ export default function RecruiterDashboard() {
             <CheckCircle2 className="w-4 h-4" /> Finalize Top 25
           </button>
         </div>
+      </div>
+
+      {/* RAG Search Section */}
+      <div className="card border-purple-500/20 relative overflow-hidden" style={{ background: 'var(--bg-surface)' }}>
+        <div className="absolute top-0 right-0 w-64 h-64 bg-purple-500/5 blur-3xl rounded-full" />
+        <h2 className="font-bold text-lg mb-4 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+          <Bot className="w-5 h-5 text-purple-400" /> RAG Semantic Candidate Search
+        </h2>
+        
+        <form onSubmit={handleRagSearch} className="flex gap-3 mb-6 relative z-10">
+          <input 
+            className="input flex-1" 
+            placeholder="e.g. Find students who organized hackathons and have strong leadership..."
+            value={ragQuery}
+            onChange={(e) => setRagQuery(e.target.value)}
+          />
+          <button 
+            type="submit" 
+            className="btn text-white px-6 flex items-center gap-2"
+            style={{ background: 'linear-gradient(135deg, #a855f7, #9333ea)' }}
+            disabled={ragBusy}
+          >
+            {ragBusy ? <Cpu className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} 
+            {ragBusy ? 'Detecting...' : 'Search Profiles'}
+          </button>
+        </form>
+
+        {ragResults.length > 0 && (
+          <div className="grid gap-3 relative z-10">
+            {ragResults.map((r, idx) => (
+              <div key={idx} className="p-4 rounded-xl border flex flex-col sm:flex-row sm:items-center gap-4" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                <div className="w-12 h-12 rounded-full flex items-center justify-center font-black text-lg shadow-inner bg-purple-500/10 text-purple-400 border border-purple-500/20 shrink-0">
+                  {r.matchScore}%
+                </div>
+                <div className="flex-1">
+                  <p className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>Candidate ID: {r.studentId.substring(0,8)}...</p>
+                  <p className="text-xs mt-1" style={{ color: 'var(--text-secondary)' }}>{r.reasoning}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="card">

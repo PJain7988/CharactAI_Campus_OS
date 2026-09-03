@@ -1,13 +1,14 @@
 const { v4: uuidv4 } = require('uuid');
 const db = require('../config/db');
 const { auditLog } = require('../utils/logger');
+const { verifyEvidence } = require('../services/rag.service');
 
 function listCategories(req, res) {
   const categories = db.prepare('SELECT * FROM activity_categories ORDER BY name').all();
   res.json({ categories });
 }
 
-function createActivity(req, res) {
+async function createActivity(req, res) {
   const studentId = req.user.role === 'student' ? req.user.id : req.body.studentId;
   if (!studentId) return res.status(400).json({ message: 'studentId is required.' });
 
@@ -32,6 +33,30 @@ function createActivity(req, res) {
 
   const id = uuidv4();
   const evidencePath = req.file ? `/uploads/${req.file.filename}` : null;
+  const fullEvidencePath = req.file ? req.file.path : null;
+
+  let parsedDetails = {};
+  if (detailsStr) {
+    try { parsedDetails = JSON.parse(detailsStr); } catch {}
+  }
+
+  // RAG Evidence Verification
+  if (fullEvidencePath) {
+    const studentInfo = db.prepare('SELECT name FROM users WHERE id = ?').get(studentId);
+    const categoryName = db.prepare('SELECT name FROM activity_categories WHERE id = ?').get(categoryId);
+    const activityClaim = {
+      title,
+      category: categoryName ? categoryName.name : 'Unknown',
+      role,
+      achievement,
+      studentName: studentInfo ? studentInfo.name : 'Unknown'
+    };
+    
+    // Non-blocking or blocking? We'll await it so we can save it.
+    const verification = await verifyEvidence(activityClaim, fullEvidencePath);
+    parsedDetails.ragVerification = verification;
+    detailsStr = JSON.stringify(parsedDetails);
+  }
 
   db.prepare(`
     INSERT INTO activities (
@@ -44,7 +69,7 @@ function createActivity(req, res) {
     detailsStr, role || null, achievement || null, evidencePath
   );
 
-  auditLog(req.user.id, 'create_activity', 'activity', id, { title });
+  auditLog(req.user.id, 'create_activity', 'activity', id, { title, ragVerified: !!fullEvidencePath });
   res.status(201).json({ message: 'Activity submitted for verification.', activityId: id });
 }
 

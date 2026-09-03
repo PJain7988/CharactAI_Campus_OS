@@ -4,6 +4,7 @@ const { extractSkills, splitSkillTypes, matchResumeToJob } = require('../service
 const { generateInterviewQuestions, nextDifficulty } = require('../services/questionEngine.service');
 const { scoreAnswer, aggregateInterview, buildFeedback } = require('../services/interviewEvaluation.service');
 const { computeCandidateScore, buildExplanation } = require('../services/recommendation.service');
+const { searchCandidates } = require('../services/rag.service');
 const { DEFAULT_RECRUITMENT_WEIGHTS } = require('../config/constants');
 const { auditLog } = require('../utils/logger');
 
@@ -323,7 +324,41 @@ function formatCandidate(cm) {
   };
 }
 
+/** POST /api/recruitment/rag-search */
+async function ragSearch(req, res) {
+  const { query } = req.body;
+  if (!query) return res.status(400).json({ message: 'Query is required for RAG search.' });
+
+  // Fetch all students and their verified activities to feed the RAG model
+  const students = db.prepare(`SELECT id as studentId, student_code, department, cgpa FROM students`).all();
+  
+  const studentProfiles = students.map(s => {
+    const user = db.prepare('SELECT name FROM users WHERE id = ?').get(s.studentId);
+    const activities = db.prepare(`
+      SELECT title, category_id, achievement 
+      FROM activities 
+      WHERE student_id = ? AND verification_status = 'approved'
+      ORDER BY activity_date DESC LIMIT 10
+    `).all(s.studentId);
+    
+    return {
+      studentId: s.studentId,
+      name: user ? user.name : 'Unknown',
+      cgpa: s.cgpa,
+      activities: activities
+    };
+  });
+
+  try {
+    const searchResults = await searchCandidates(query, studentProfiles);
+    res.json({ results: searchResults });
+  } catch (error) {
+    console.error('RAG Search API Error:', error);
+    res.status(500).json({ message: 'Internal server error during RAG search.' });
+  }
+}
+
 module.exports = {
   createJob, listJobs, getJob, runMatching, getCandidates, explainCandidate,
-  startInterview, submitAnswer, completeInterview, finalizeShortlist, uploadResume
+  startInterview, submitAnswer, completeInterview, finalizeShortlist, uploadResume, ragSearch
 };

@@ -13,6 +13,7 @@ router.post('/jobs/:id/candidates/:studentId/start-interview', requireAuth, ctrl
 router.post('/interviews/:interviewId/answer', requireAuth, ctrl.submitAnswer);
 router.post('/interviews/:interviewId/complete', requireAuth, ctrl.completeInterview);
 router.post('/jobs/:id/finalize', requireAuth, roleGuard('recruiter', 'admin'), ctrl.finalizeShortlist);
+router.post('/rag-search', requireAuth, roleGuard('recruiter', 'admin', 'placement_officer'), ctrl.ragSearch);
 router.post('/resume', requireAuth, roleGuard('student', 'admin'), ctrl.uploadResume);
 
 module.exports = router;

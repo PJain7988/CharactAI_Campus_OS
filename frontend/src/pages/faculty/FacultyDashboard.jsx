@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, CheckCircle2, XCircle, FileText, UserCircle, Calendar, Tag } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, XCircle, FileText, UserCircle, Calendar, Tag, Bot } from 'lucide-react';
 import api from '../../api/client';
 
 export default function FacultyDashboard() {
@@ -112,6 +112,31 @@ export default function FacultyDashboard() {
                       <FileText className="w-4 h-4" /> View Submitted Evidence
                     </a>
                   )}
+
+                  {(() => {
+                    if (!a.details_json) return null;
+                    try {
+                      const details = JSON.parse(a.details_json);
+                      if (details.ragVerification) {
+                        const { confidenceScore, reasoning } = details.ragVerification;
+                        const isHigh = confidenceScore >= 70;
+                        return (
+                          <div className={`p-4 rounded-xl border mt-4 flex items-start gap-3 shadow-inner ${isHigh ? 'bg-emerald-500/10 border-emerald-500/30' : 'bg-amber-500/10 border-amber-500/30'}`}>
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${isHigh ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'}`}>
+                              <Bot className="w-4 h-4" />
+                            </div>
+                            <div>
+                              <p className={`text-[10px] uppercase tracking-widest font-black mb-1 ${isHigh ? 'text-emerald-400' : 'text-amber-400'}`}>
+                                RAG Verification (Confidence: {confidenceScore}%)
+                              </p>
+                              <p className="text-sm font-semibold" style={{ color: 'var(--text-primary)' }}>{reasoning}</p>
+                            </div>
+                          </div>
+                        );
+                      }
+                    } catch (e) {}
+                    return null;
+                  })()}
                 </div>
                 
                 <div className="shrink-0 w-full lg:w-72 p-5 rounded-2xl flex flex-col gap-3 shadow-inner" style={{ background: 'var(--bg-surface)', border: '1px solid var(--border)' }}>

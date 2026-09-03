@@ -47,19 +47,20 @@ const CATEGORIES = [
 ];
 
 const DIM_META = {
-  academic:        { color: '#60a5fa', grad: 'linear-gradient(90deg,#3b82f6,#60a5fa)',  Icon: GraduationCap },
-  learning:        { color: '#a78bfa', grad: 'linear-gradient(90deg,#8b5cf6,#a78bfa)',  Icon: BookOpen },
-  classroom:       { color: '#818cf8', grad: 'linear-gradient(90deg,#6366f1,#818cf8)',  Icon: School },
-  technical:       { color: '#22d3ee', grad: 'linear-gradient(90deg,#06b6d4,#22d3ee)',  Icon: Microscope },
-  leadership:      { color: '#c084fc', grad: 'linear-gradient(90deg,#a855f7,#c084fc)',  Icon: Users },
-  teamwork:        { color: '#94a3b8', grad: 'linear-gradient(90deg,#64748b,#94a3b8)',  Icon: Network },
-  discipline:      { color: '#fbbf24', grad: 'linear-gradient(90deg,#f59e0b,#fbbf24)',  Icon: Flame },
-  creativity:      { color: '#f472b6', grad: 'linear-gradient(90deg,#ec4899,#f472b6)',  Icon: Star },
-  sports:          { color: '#34d399', grad: 'linear-gradient(90deg,#10b981,#34d399)',  Icon: Dumbbell },
-  events:          { color: '#fb7185', grad: 'linear-gradient(90deg,#f43f5e,#fb7185)',  Icon: CalendarDays },
-  social:          { color: '#2dd4bf', grad: 'linear-gradient(90deg,#14b8a6,#2dd4bf)',  Icon: Heart },
-  extracurricular: { color: '#fb923c', grad: 'linear-gradient(90deg,#f97316,#fb923c)',  Icon: Globe },
+  discipline:                  { color: '#fbbf24', grad: 'linear-gradient(90deg,#f59e0b,#fbbf24)',  Icon: Flame },
+  consistency:                 { color: '#fb923c', grad: 'linear-gradient(90deg,#f97316,#fb923c)',  Icon: Clock },
+  learning_orientation:        { color: '#a78bfa', grad: 'linear-gradient(90deg,#8b5cf6,#a78bfa)',  Icon: BookOpen },
+  leadership:                  { color: '#c084fc', grad: 'linear-gradient(90deg,#a855f7,#c084fc)',  Icon: Users },
+  teamwork:                    { color: '#94a3b8', grad: 'linear-gradient(90deg,#64748b,#94a3b8)',  Icon: Network },
+  technical_engagement:        { color: '#22d3ee', grad: 'linear-gradient(90deg,#06b6d4,#22d3ee)',  Icon: Microscope },
+  academic_engagement:         { color: '#60a5fa', grad: 'linear-gradient(90deg,#3b82f6,#60a5fa)',  Icon: GraduationCap },
+  community_participation:     { color: '#2dd4bf', grad: 'linear-gradient(90deg,#14b8a6,#2dd4bf)',  Icon: Heart },
+  creativity:                  { color: '#f472b6', grad: 'linear-gradient(90deg,#ec4899,#f472b6)',  Icon: Star },
+  extracurricular_involvement: { color: '#fb7185', grad: 'linear-gradient(90deg,#f43f5e,#fb7185)',  Icon: CalendarDays },
+  personal_development:        { color: '#34d399', grad: 'linear-gradient(90deg,#10b981,#34d399)',  Icon: Dumbbell },
 };
+
+const formatDim = (dim) => dim.replace(/_/g, ' ');
 
 /* ─────────────────────────────── Main Component ────────────────────────── */
 
@@ -545,8 +546,8 @@ function AssessmentTab({ assessment, busy, message, onRun }) {
               <div className="text-[10px] mt-1" style={{ color: 'var(--text-muted)' }}>out of 100</div>
               <div className="flex flex-wrap gap-1.5 mt-3 justify-center">
                 {assessment.strengths?.map(s => (
-                  <span key={s} className="text-[9px] font-bold capitalize px-2 py-0.5 rounded-full"
-                    style={{ background: 'rgba(99,102,241,0.2)', color: '#a5b4fc' }}>{s}</span>
+                  <span key={formatDim(s)} className="text-[9px] font-bold capitalize px-2 py-0.5 rounded-full"
+                    style={{ background: 'rgba(99,102,241,0.2)', color: '#a5b4fc' }}>{formatDim(s)}</span>
                 ))}
               </div>
             </div>
@@ -559,10 +560,10 @@ function AssessmentTab({ assessment, busy, message, onRun }) {
                     const m = DIM_META[dim] || DIM_META.academic;
                     const DimIcon = m.Icon;
                     return (
-                      <div key={dim}>
+                      <div key={formatDim(dim)}>
                         <div className="flex justify-between items-center mb-1">
                           <span className="text-[11px] font-bold capitalize flex items-center gap-1.5" style={{ color: m.color }}>
-                            <DimIcon className="w-3 h-3" /> {dim}
+                            <DimIcon className="w-3 h-3" /> {formatDim(dim)}
                           </span>
                           <span className="text-[11px] font-black" style={{ color: 'var(--text-primary)' }}>{score}</span>
                         </div>
@@ -590,11 +591,11 @@ function AssessmentTab({ assessment, busy, message, onRun }) {
                   const m = DIM_META[dim] || DIM_META.academic;
                   const DimIcon = m.Icon;
                   return (
-                    <div key={dim} className="p-3 rounded-xl"
+                    <div key={formatDim(dim)} className="p-3 rounded-xl"
                       style={{ background: 'var(--bg-base)', borderLeft: `3px solid ${m.color}` }}>
                       <p className="text-[11px] font-bold capitalize mb-0.5 flex items-center gap-1.5"
                         style={{ color: 'var(--text-primary)' }}>
-                        <DimIcon className="w-3 h-3" style={{ color: m.color }} /> {dim}
+                        <DimIcon className="w-3 h-3" style={{ color: m.color }} /> {formatDim(dim)}
                       </p>
                       <p className="text-[11px] leading-relaxed" style={{ color: 'var(--text-secondary)' }}>{text}</p>
                     </div>
@@ -654,8 +655,8 @@ function GrowthTab({ growth }) {
             {g.scores && Object.entries(g.scores).slice(0, 3).map(([d, v]) => {
               const m = DIM_META[d] || DIM_META.academic;
               return (
-                <div key={d} className="flex justify-between text-[10px] mt-1.5">
-                  <span className="capitalize" style={{ color: 'var(--text-muted)' }}>{d}</span>
+                <div key={formatDim(d)} className="flex justify-between text-[10px] mt-1.5">
+                  <span className="capitalize" style={{ color: 'var(--text-muted)' }}>{formatDim(d)}</span>
                   <span style={{ color: m.color }}>{v}</span>
                 </div>
               );
@@ -716,7 +717,7 @@ function SkillsTab({ assessment, recommendations, onGoAssess }) {
           const grade = score >= 80 ? 'Excellent' : score >= 60 ? 'Good' : score >= 40 ? 'Average' : 'Needs Work';
           const gc    = score >= 80 ? '#34d399'   : score >= 60 ? '#22d3ee' : score >= 40 ? '#fbbf24' : '#f87171';
           return (
-            <motion.div key={dim} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
+            <motion.div key={formatDim(dim)} initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }}
               transition={{ delay: i * 0.05 }}
               className="p-4 sm:p-5 rounded-2xl relative overflow-hidden"
               style={{ background: 'var(--bg-card)', border: '1px solid var(--border)' }}>
@@ -732,7 +733,7 @@ function SkillsTab({ assessment, recommendations, onGoAssess }) {
                   <p className="text-[10px] font-bold" style={{ color: gc }}>{grade}</p>
                 </div>
               </div>
-              <p className="text-sm font-bold capitalize mb-2" style={{ color: 'var(--text-primary)' }}>{dim}</p>
+              <p className="text-sm font-bold capitalize mb-2" style={{ color: 'var(--text-primary)' }}>{formatDim(dim)}</p>
               <div className="w-full rounded-full h-1.5" style={{ background: 'var(--border)' }}>
                 <motion.div initial={{ width: 0 }} animate={{ width: `${score}%` }}
                   transition={{ duration: 1, ease: 'easeOut', delay: i * 0.07 }}
@@ -755,7 +756,7 @@ function SkillsTab({ assessment, recommendations, onGoAssess }) {
                 </div>
                 <div>
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className="text-xs font-bold capitalize" style={{ color: 'var(--text-primary)' }}>{s.dimension}</span>
+                    <span className="text-xs font-bold capitalize" style={{ color: 'var(--text-primary)' }}>{formatDim(s.dimension)}</span>
                     <span className="px-1.5 py-0.5 rounded text-[9px] font-black bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
                       {s.score}/100
                     </span>

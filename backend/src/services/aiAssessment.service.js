@@ -15,35 +15,33 @@ const { DIMENSIONS, DEFAULT_DIMENSION_WEIGHTS, MODEL_VERSION } = require('../con
 // Category → dimension(s) mapping.
 // A single activity category can boost multiple dimensions.
 const CATEGORY_DIMENSION_MAP = {
-  academic:       ['academic', 'discipline'],
-  learning:       ['learning'],
-  library:        ['learning', 'discipline'],       // library visits
-  classroom:      ['classroom', 'discipline', 'academic'],
-  technical:      ['technical', 'creativity'],
-  sports:         ['sports', 'teamwork', 'discipline'],
-  games:          ['sports', 'creativity'],          // strategy games / indoor games
-  cultural:       ['creativity', 'extracurricular'],
-  leadership:     ['leadership'],
-  events:         ['events', 'extracurricular'],
-  social:         ['social'],
-  teamwork:       ['teamwork'],
+  academic:       ['academic_engagement', 'consistency'],
+  learning:       ['learning_orientation', 'personal_development'],
+  library:        ['learning_orientation', 'consistency'],
+  classroom:      ['discipline', 'consistency', 'academic_engagement'],
+  technical:      ['technical_engagement', 'creativity'],
+  sports:         ['discipline', 'teamwork', 'personal_development'],
+  games:          ['creativity', 'personal_development'],
+  cultural:       ['creativity', 'extracurricular_involvement'],
+  leadership:     ['leadership', 'personal_development'],
+  events:         ['extracurricular_involvement', 'learning_orientation'],
+  social:         ['community_participation', 'teamwork'],
+  teamwork:       ['teamwork', 'leadership'],
 };
 
 // Saturation points — how many verified activities approach near-max sub-score.
-// Diminishing returns prevent rewarding pure volume.
 const SATURATION = {
-  academic:        20,
-  learning:        30,
-  classroom:       60,   // daily classes — high saturation expected
-  technical:       18,
-  leadership:      10,
-  teamwork:        15,
-  discipline:     120,   // composite from attendance + consistency
-  creativity:      12,
-  sports:          15,
-  events:          12,
-  social:          15,
-  extracurricular: 15,
+  discipline:                   80,
+  consistency:                  100,
+  learning_orientation:         20,
+  leadership:                   10,
+  teamwork:                     15,
+  technical_engagement:         15,
+  academic_engagement:          30,
+  community_participation:      12,
+  creativity:                   15,
+  extracurricular_involvement:  15,
+  personal_development:         20,
 };
 
 function diminishingReturnsScore(count, saturationPoint, ceiling = 100) {
@@ -162,24 +160,25 @@ function computeAssessment(studentId, opts = {}) {
     if (e.count === 0) {
       explanation[dim] = `No verified ${dim} activities recorded yet.`;
     } else {
-      const parts = [`${e.count} verified ${dim}-related activit${e.count === 1 ? 'y' : 'ies'}`];
+      const parts = [`${e.count} verified ${dim.replace(/_/g, ' ')}-related activit${e.count === 1 ? 'y' : 'ies'}`];
       if (e.books > 0) parts.push(`${e.books} books/research materials read`);
       if (e.certs > 0) parts.push(`${e.certs} certifications completed`);
       if (e.projects > 0) parts.push(`${e.projects} projects/hackathons`);
       if (e.roles > 0) parts.push(`${e.roles} leadership or core team roles`);
 
+      const dimName = dim.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
       explanation[dim] =
-        `${dim.charAt(0).toUpperCase() + dim.slice(1)} score of ${withBonus}/100 ` +
+        `${dimName} score of ${withBonus}/100 ` +
         `was influenced by ${parts.join(', ')}.` +
         (e.samples.length ? ` Key examples include: ${e.samples.slice(0, 3).join(', ')}.` : '');
     }
   }
 
-  // CGPA contribution to academic score
+  // CGPA contribution to academic_engagement score
   if (student && student.cgpa) {
     const cgpaBonus = Math.round((student.cgpa / 10) * 15);
-    scores.academic = Math.min(100, Math.round(scores.academic + cgpaBonus));
-    explanation.academic += ` CGPA of ${student.cgpa} added ${cgpaBonus} bonus points.`;
+    scores.academic_engagement = Math.min(100, Math.round((scores.academic_engagement || 0) + cgpaBonus));
+    explanation.academic_engagement += ` CGPA of ${student.cgpa} added ${cgpaBonus} bonus points.`;
   }
 
   const overall = Math.round(
@@ -191,12 +190,12 @@ function computeAssessment(studentId, opts = {}) {
   const developmentAreas = ranked.slice(-3).map(r => r.dim);
 
   // Determine Archetype (Clustering Simulation)
-  let archetype = 'Balanced Performer';
-  if (strengths.includes('technical') && strengths.includes('learning')) archetype = 'Technical Innovator';
-  else if (strengths.includes('leadership') || strengths.includes('social')) archetype = 'Leadership Oriented';
-  else if (strengths.includes('academic') && scores.academic > 80) archetype = 'Academic Focused';
-  else if (strengths.includes('extracurricular') || strengths.includes('events') || strengths.includes('cultural')) archetype = 'Extracurricular Focused';
-  else if (scores.sports > 75) archetype = 'Athletic Achiever';
+  let archetype = 'Balanced Achiever';
+  if (strengths.includes('technical_engagement') && strengths.includes('learning_orientation')) archetype = 'Technical Innovator';
+  else if (strengths.includes('leadership') || strengths.includes('community_participation')) archetype = 'Community Leader';
+  else if (strengths.includes('academic_engagement') && scores.academic_engagement > 80) archetype = 'Academic Scholar';
+  else if (strengths.includes('extracurricular_involvement') || strengths.includes('creativity')) archetype = 'Creative All-Rounder';
+  else if (scores.personal_development > 75) archetype = 'Growth Oriented';
 
   return {
     studentId,
@@ -213,17 +212,19 @@ function saveAssessment(assessment) {
   db.prepare(`
     INSERT INTO ai_assessments (
       id, student_id, academic_year,
-      academic_score, learning_score, technical_score,
-      leadership_score, teamwork_score, discipline_score,
-      creativity_score, sports_score, social_score, extracurricular_score,
+      discipline_score, consistency_score, learning_orientation_score,
+      leadership_score, teamwork_score, technical_engagement_score,
+      academic_engagement_score, community_participation_score, creativity_score,
+      extracurricular_involvement_score, personal_development_score,
       overall_score, strengths_json, development_areas_json, explanation_json, model_version
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
   `).run(
     id, assessment.studentId, assessment.academicYear,
-    assessment.scores.academic,  assessment.scores.learning,  assessment.scores.technical,
-    assessment.scores.leadership, assessment.scores.teamwork, assessment.scores.discipline,
-    assessment.scores.creativity, assessment.scores.sports,  assessment.scores.social,
-    assessment.scores.extracurricular, assessment.overall,
+    assessment.scores.discipline, assessment.scores.consistency, assessment.scores.learning_orientation,
+    assessment.scores.leadership, assessment.scores.teamwork, assessment.scores.technical_engagement,
+    assessment.scores.academic_engagement, assessment.scores.community_participation, assessment.scores.creativity,
+    assessment.scores.extracurricular_involvement, assessment.scores.personal_development,
+    assessment.overall,
     JSON.stringify(assessment.strengths), JSON.stringify(assessment.developmentAreas),
     JSON.stringify(assessment.explanation), assessment.modelVersion
   );
@@ -232,18 +233,17 @@ function saveAssessment(assessment) {
 
 function buildRecommendations(assessment) {
   const suggestions = {
-    academic:        'Attend more subject workshops, seminars and aim for consistent assignment submission.',
-    learning:        'Increase library visits and finish at least one certification or online course this semester.',
-    classroom:       'Maintain a higher daily attendance streak and participate actively in class discussions.',
-    technical:       'Contribute to an open-source project or join the upcoming hackathon.',
-    leadership:      'Take up a club coordinator or event-organizer role.',
-    teamwork:        'Join a team-based project or a hackathon with a multi-person team.',
-    discipline:      'Improve attendance consistency and ensure timely submission of evidence.',
-    creativity:      'Participate in a cultural, design, or photography event this semester.',
-    sports:          'Enroll in regular practice sessions for a sport of your choice.',
-    events:          'Register for at least one inter-college or national-level event.',
-    social:          'Volunteer for a community initiative or NGO campaign.',
-    extracurricular: 'Diversify participation across clubs, workshops, and enrichment activities.',
+    discipline:                  'Improve attendance consistency and ensure timely submission of assignments and activities.',
+    consistency:                 'Maintain a steady pace of activity logging across all categories rather than bursting.',
+    learning_orientation:        'Increase library visits, read more books, or finish a new online certification.',
+    leadership:                  'Take up a club coordinator or event-organizer role to build management skills.',
+    teamwork:                    'Join a team-based project or a hackathon with a multi-person team.',
+    technical_engagement:        'Contribute to an open-source project, write technical blogs, or join a hackathon.',
+    academic_engagement:         'Aim for consistent assignment submissions and high marks in internal assessments.',
+    community_participation:     'Volunteer for a community initiative, NGO campaign, or campus social service drive.',
+    creativity:                  'Participate in a cultural, design, arts, or photography event this semester.',
+    extracurricular_involvement: 'Diversify participation across clubs, non-technical workshops, and inter-college events.',
+    personal_development:        'Focus on individual sports, soft-skills training, or independent learning initiatives.'
   };
 
   const developmentSuggestions = assessment.developmentAreas

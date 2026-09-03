@@ -57,7 +57,7 @@ async function generateCertificatePdf({ student, user, assessment, narrative, ce
     doc.font('Helvetica').fontSize(11);
     const dims = Object.entries(assessment.scores);
     dims.forEach(([dim, score]) => {
-      doc.text(`${capitalize(dim)}`, { continued: true, width: 250 });
+      doc.text(`${formatDim(dim)}`, { continued: true, width: 250 });
       doc.text(`  ${score}/100`, { align: 'right' });
     });
 
@@ -83,7 +83,9 @@ async function generateCertificatePdf({ student, user, assessment, narrative, ce
   return filePath;
 }
 
-function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+function formatDim(s) { 
+  return s.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '); 
+}
 
 /**
  * Renders an AI-generated ATS-friendly Resume based on verified activities.
@@ -131,10 +133,10 @@ async function generateResumePdf({ student, user, assessment, activities }) {
     Object.entries(grouped).forEach(([cat, items]) => {
       if (['classroom', 'library'].includes(cat) && items.length > 5) {
         // Summarize high volume basic activities
-        doc.fontSize(11).font('Helvetica-Bold').text(capitalize(cat)).moveDown(0.2);
+        doc.fontSize(11).font('Helvetica-Bold').text(formatDim(cat)).moveDown(0.2);
         doc.fontSize(10).font('Helvetica').text(`• Consistently engaged with ${items.length} verified ${cat} sessions.`, { indent: 10 }).moveDown(0.5);
       } else {
-        doc.fontSize(11).font('Helvetica-Bold').text(capitalize(cat)).moveDown(0.2);
+        doc.fontSize(11).font('Helvetica-Bold').text(formatDim(cat)).moveDown(0.2);
         items.slice(0, 3).forEach(act => {
           doc.fontSize(10).font('Helvetica-Bold').text(`• ${act.title || 'Activity'}`, { indent: 10 });
           if (act.description) {
@@ -154,7 +156,7 @@ async function generateResumePdf({ student, user, assessment, activities }) {
     const topSkills = Object.entries(assessment.scores)
       .sort(([,a], [,b]) => b - a)
       .slice(0, 6)
-      .map(([k]) => capitalize(k));
+      .map(([k]) => formatDim(k));
       
     doc.fontSize(10).font('Helvetica').text(`Top Strengths: ${topSkills.join(' • ')}`, { indent: 10 });
 

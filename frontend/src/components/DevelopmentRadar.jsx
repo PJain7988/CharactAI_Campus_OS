@@ -2,7 +2,10 @@ import React from 'react';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
 
 export default function DevelopmentRadar({ scores }) {
-  const data = Object.entries(scores || {}).map(([dimension, value]) => ({ dimension, value }));
+  const data = Object.entries(scores || {}).map(([dim, value]) => ({ 
+    dimension: dim.split('_').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' '), 
+    value 
+  }));
   return (
     <ResponsiveContainer width="100%" height={280}>
       <RadarChart data={data} outerRadius="75%">

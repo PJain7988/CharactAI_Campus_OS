@@ -85,4 +85,85 @@ async function generateCertificatePdf({ student, user, assessment, narrative, ce
 
 function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
-module.exports = { generateCertificateCode, generateCertificatePdf, certDir };
+/**
+ * Renders an AI-generated ATS-friendly Resume based on verified activities.
+ */
+async function generateResumePdf({ student, user, assessment, activities }) {
+  const filePath = path.join(certDir, `Resume_${user.name.replace(/\s+/g, '_')}_${student.enrollment_no}.pdf`);
+  
+  await new Promise((resolve, reject) => {
+    const doc = new PDFDocument({ size: 'A4', margin: 50 });
+    const stream = fs.createWriteStream(filePath);
+    doc.pipe(stream);
+
+    // Header
+    doc
+      .fontSize(24).font('Helvetica-Bold').fillColor('#0f172a')
+      .text(user.name.toUpperCase(), { align: 'center' })
+      .moveDown(0.2)
+      .fontSize(10).font('Helvetica').fillColor('#334155')
+      .text(`${student.program} | Batch ${student.admission_year}-${student.graduation_year} | ID: ${student.enrollment_no}`, { align: 'center' })
+      .text(`Email: ${user.email}`, { align: 'center' })
+      .moveDown(1);
+
+    // Line separator
+    doc.moveTo(50, doc.y).lineTo(545, doc.y).lineWidth(1).strokeColor('#cbd5e1').stroke();
+    doc.moveDown(1);
+
+    // AI Summary
+    doc.fontSize(14).font('Helvetica-Bold').fillColor('#0f172a').text('PROFESSIONAL SUMMARY', { underline: true }).moveDown(0.5);
+    doc.fontSize(10).font('Helvetica').fillColor('#334155').text(
+      `Highly motivated ${student.program} student with a verified Holistic Assessment score of ${assessment.overall}/100. Demonstrated excellence in technical execution, leadership, and continuous learning. Proactive team player with a strong track record of campus engagement.`,
+      { align: 'justify', lineGap: 3 }
+    ).moveDown(1.5);
+
+    // Verified Activities
+    doc.fontSize(14).font('Helvetica-Bold').fillColor('#0f172a').text('VERIFIED EXPERIENCE & PROJECTS', { underline: true }).moveDown(0.5);
+    
+    // Group activities by category, only showing approved ones
+    const approved = activities.filter(a => a.verification_status === 'approved');
+    const grouped = approved.reduce((acc, act) => {
+      acc[act.category_name] = acc[act.category_name] || [];
+      acc[act.category_name].push(act);
+      return acc;
+    }, {});
+
+    Object.entries(grouped).forEach(([cat, items]) => {
+      if (['classroom', 'library'].includes(cat) && items.length > 5) {
+        // Summarize high volume basic activities
+        doc.fontSize(11).font('Helvetica-Bold').text(capitalize(cat)).moveDown(0.2);
+        doc.fontSize(10).font('Helvetica').text(`• Consistently engaged with ${items.length} verified ${cat} sessions.`, { indent: 10 }).moveDown(0.5);
+      } else {
+        doc.fontSize(11).font('Helvetica-Bold').text(capitalize(cat)).moveDown(0.2);
+        items.slice(0, 3).forEach(act => {
+          doc.fontSize(10).font('Helvetica-Bold').text(`• ${act.title || 'Activity'}`, { indent: 10 });
+          if (act.description) {
+            doc.fontSize(9).font('Helvetica').text(act.description, { indent: 20 }).moveDown(0.2);
+          } else {
+            doc.moveDown(0.2);
+          }
+        });
+        doc.moveDown(0.5);
+      }
+    });
+
+    // Core Competencies
+    doc.moveDown(1);
+    doc.fontSize(14).font('Helvetica-Bold').fillColor('#0f172a').text('AI-VERIFIED COMPETENCIES', { underline: true }).moveDown(0.5);
+    
+    const topSkills = Object.entries(assessment.scores)
+      .sort(([,a], [,b]) => b - a)
+      .slice(0, 6)
+      .map(([k]) => capitalize(k));
+      
+    doc.fontSize(10).font('Helvetica').text(`Top Strengths: ${topSkills.join(' • ')}`, { indent: 10 });
+
+    doc.end();
+    stream.on('finish', resolve);
+    stream.on('error', reject);
+  });
+
+  return filePath;
+}
+
+module.exports = { generateCertificateCode, generateCertificatePdf, generateResumePdf, certDir };

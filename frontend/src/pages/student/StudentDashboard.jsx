@@ -13,6 +13,7 @@ import api from '../../api/client';
 import { useAuth } from '../../context/AuthContext';
 import Badge from '../../components/Badge';
 import DevelopmentRadar from '../../components/DevelopmentRadar';
+import AiMentorChat from '../../components/AiMentorChat';
 
 /* ─────────────────────────────── Constants ─────────────────────────────── */
 
@@ -111,6 +112,17 @@ export default function StudentDashboard() {
     setBusy(true); setMessage('');
     try { const { data } = await api.post(`/certificates/${student.id}/generate`, { certificateType: type }); setMessage(`✓ ${type} Certificate generated!`); await load(); }
     finally { setBusy(false); }
+  };
+
+  const generateResumeAI = async () => {
+    setBusy(true); setMessage('');
+    try { 
+      const { data } = await api.post(`/certificates/resume/${student.id}/generate`);
+      window.open(data.downloadUrl, '_blank');
+      setMessage('✓ AI Resume generated successfully!');
+    } catch {
+      setMessage('✗ Error generating resume.');
+    } finally { setBusy(false); }
   };
 
   if (!student) return (
@@ -557,7 +569,7 @@ export default function StudentDashboard() {
                       ))}
                     </div>
                     {growth.length > 1 && (
-                      <Section title="Growth Trend" icon={TrendingUp}>
+                      <Section title="Growth Trend & Predictive AI" icon={TrendingUp}>
                         <div className="flex items-end gap-5 h-40 px-6">
                           {growth.map((g, i) => (
                             <div key={g.year} className="flex-1 flex flex-col items-center gap-2">
@@ -567,6 +579,20 @@ export default function StudentDashboard() {
                               <span className="text-[10px] font-bold" style={{ color: 'var(--text-muted)' }}>Y{g.year}</span>
                             </div>
                           ))}
+                          {/* Predictive AI Bar */}
+                          {growth.length < 4 && (() => {
+                            const diff = growth[growth.length - 1].overall - growth[growth.length - 2].overall;
+                            const pred = Math.min(100, Math.max(0, Math.round((growth[growth.length - 1].overall + diff)*10)/10));
+                            const nextYear = growth[growth.length - 1].year + 1;
+                            return (
+                              <div key="pred" className="flex-1 flex flex-col items-center gap-2 opacity-60">
+                                <span className="text-xs font-black text-amber-400">{pred} (Pred)</span>
+                                <motion.div initial={{ height: 0 }} animate={{ height: `${pred}%` }} transition={{ delay: growth.length * 0.15, duration: 1, ease: 'easeOut' }}
+                                  className="w-full rounded-t-xl min-h-[4px]" style={{ border: '2px dashed #fbbf24', background: 'rgba(251,191,36,0.1)' }} />
+                                <span className="text-[10px] font-bold text-amber-400">Y{nextYear}</span>
+                              </div>
+                            );
+                          })()}
                         </div>
                         {growth.length >= 2 && (
                           <div className="mt-6 p-4 rounded-xl" style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)' }}>
@@ -732,6 +758,12 @@ export default function StudentDashboard() {
                                 </button>
                                 <button onClick={() => generateCertificate('Community Engagement')} disabled={busy} className="w-full flex items-center justify-center gap-2 text-xs py-2 rounded-lg font-bold transition-all" style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}>
                                   <Heart className="w-3.5 h-3.5 text-teal-400" /> Community
+                                </button>
+                              </div>
+                              <div className="mt-4 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,0.1)' }}>
+                                <p className="text-xs text-slate-400 mb-2 font-semibold uppercase tracking-wider">Career Tools</p>
+                                <button onClick={generateResumeAI} disabled={busy} className="btn-secondary w-full flex items-center justify-center gap-2 text-sm py-2 bg-slate-800 text-white border-indigo-500 hover:bg-indigo-900 transition-colors">
+                                  <FileText className="w-4 h-4 text-indigo-400" /> Generate AI Resume (ATS)
                                 </button>
                               </div>
                             </div>
@@ -1093,6 +1125,8 @@ function LogActivityForm({ categories, onSuccess, academicYear, userName }) {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <AiMentorChat student={student} assessment={assessment} />
 
       {showScanner && (
         <BiometricScannerModal 

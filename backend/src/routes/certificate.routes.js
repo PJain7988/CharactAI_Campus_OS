@@ -4,8 +4,10 @@ const { roleGuard } = require('../middleware/roleGuard');
 const ctrl = require('../controllers/certificate.controller');
 
 router.post('/:studentId/generate', requireAuth, roleGuard('student', 'admin'), ctrl.generate);
+router.post('/resume/:studentId/generate', requireAuth, roleGuard('student', 'admin'), ctrl.generateResume);
 router.get('/mine', requireAuth, ctrl.myCertificates);
 router.get('/:code/download', ctrl.download); // link is only shared with the owner; kept simple for the demo
+router.get('/resume/:filename', ctrl.downloadResume);
 router.get('/verify/:code', ctrl.verify);       // fully public
 
 module.exports = router;

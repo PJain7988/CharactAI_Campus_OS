@@ -2,7 +2,7 @@ const db = require('../config/db');
 const path = require('path');
 const { computeAssessment, saveAssessment } = require('../services/aiAssessment.service');
 const { buildNarrative } = require('../services/narrative.service');
-const { generateCertificateCode, generateCertificatePdf } = require('../services/certificate.service');
+const { generateCertificateCode, generateCertificatePdf, generateResumePdf } = require('../services/certificate.service');
 const { auditLog } = require('../utils/logger');
 const { v4: uuidv4 } = require('uuid');
 
@@ -45,11 +45,53 @@ async function generate(req, res) {
   });
 }
 
+async function generateResume(req, res) {
+  const { studentId } = req.params;
+  if (req.user.role === 'student' && req.user.id !== studentId) {
+    return res.status(403).json({ message: 'Not authorized.' });
+  }
+
+  const student = db.prepare('SELECT * FROM students WHERE id = ?').get(studentId);
+  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(studentId);
+  if (!student || !user) return res.status(404).json({ message: 'Student not found.' });
+
+  const activities = db.prepare(`
+    SELECT a.*, c.name as category_name
+    FROM activities a
+    JOIN activity_categories c ON c.id = a.category_id
+    WHERE a.student_id = ?
+    ORDER BY a.activity_date DESC
+  `).all(studentId);
+
+  const assessment = computeAssessment(studentId);
+
+  try {
+    const filePath = await generateResumePdf({ student, user, assessment, activities });
+    const filename = path.basename(filePath);
+    
+    auditLog(req.user.id, 'generate_resume', 'student', studentId, { filename });
+    
+    res.status(201).json({
+      message: 'Resume generated successfully',
+      downloadUrl: `/api/certificates/resume/${filename}`
+    });
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Failed to generate resume.' });
+  }
+}
+
 function download(req, res) {
   const { code } = req.params;
   const cert = db.prepare('SELECT * FROM certificates WHERE certificate_code = ?').get(code);
   if (!cert) return res.status(404).json({ message: 'Certificate not found.' });
   res.download(path.resolve(cert.file_path), `${code}.pdf`);
+}
+
+function downloadResume(req, res) {
+  const { filename } = req.params;
+  const { certDir } = require('../services/certificate.service');
+  res.download(path.resolve(certDir, filename), filename);
 }
 
 /** Public endpoint — no auth. Returns only privacy-safe fields (Section 29). */
@@ -83,4 +125,4 @@ function myCertificates(req, res) {
   res.json({ certificates: certs });
 }
 
-module.exports = { generate, download, verify, myCertificates };
+module.exports = { generate, generateResume, download, downloadResume, verify, myCertificates };

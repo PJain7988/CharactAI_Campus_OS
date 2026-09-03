@@ -6,6 +6,7 @@ import api from '../../api/client';
 
 const TABS = [
   { id: 'overview', label: 'Institution Overview', icon: LayoutDashboard },
+  { id: 'verification', label: 'Verification Queue', icon: ShieldAlert },
   { id: 'analytics', label: 'Detailed Analytics', icon: Activity },
   { id: 'audit', label: 'Audit Logs', icon: TerminalSquare }
 ];
@@ -13,12 +14,28 @@ const TABS = [
 export default function AdminDashboard() {
   const [overview, setOverview] = useState(null);
   const [logs, setLogs] = useState([]);
+  const [pending, setPending] = useState([]);
   const [activeTab, setActiveTab] = useState('overview');
 
-  useEffect(() => {
+  const loadData = () => {
     api.get('/admin/overview').then(({ data }) => setOverview(data));
     api.get('/admin/audit-logs').then(({ data }) => setLogs(data.logs.slice(0, 15)));
+    api.get('/admin/pending-activities').then(({ data }) => setPending(data.activities));
+  };
+
+  useEffect(() => {
+    loadData();
   }, []);
+
+  const handleVerify = async (id, status) => {
+    try {
+      await api.put(`/activities/${id}/status`, { status });
+      loadData();
+    } catch (e) {
+      console.error(e);
+      alert('Error verifying activity.');
+    }
+  };
 
   if (!overview) return (
     <div className="min-h-screen flex items-center justify-center">
@@ -170,6 +187,63 @@ export default function AdminDashboard() {
                     </p>
                   </div>
                 </div>
+              </div>
+            )}
+
+            {/* VERIFICATION TAB */}
+            {activeTab === 'verification' && (
+              <div className="card">
+                <h2 className="font-bold text-base mb-6 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+                  <ShieldAlert className="w-5 h-5 text-amber-400" /> Pending Verification Queue ({pending.length})
+                </h2>
+                {pending.length === 0 ? (
+                  <div className="text-center py-10" style={{ color: 'var(--text-muted)' }}>
+                    <ShieldAlert className="w-10 h-10 mx-auto mb-3 opacity-50" />
+                    <p>No activities pending verification.</p>
+                  </div>
+                ) : (
+                  <div className="rounded-2xl overflow-hidden shadow-inner" style={{ border: '1px solid var(--border)' }}>
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-left border-collapse text-sm">
+                        <thead style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+                          <tr>
+                            <th className="py-3 px-4 font-bold text-xs uppercase">Date</th>
+                            <th className="py-3 px-4 font-bold text-xs uppercase">Student</th>
+                            <th className="py-3 px-4 font-bold text-xs uppercase">Activity Details</th>
+                            <th className="py-3 px-4 font-bold text-xs uppercase text-right">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y" style={{ divideColor: 'var(--border)' }}>
+                          {pending.map((p) => (
+                            <tr key={p.id} className="hover:bg-white/5 transition-colors">
+                              <td className="py-3 px-4 whitespace-nowrap text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>{p.activity_date}</td>
+                              <td className="py-3 px-4">
+                                <p className="font-bold" style={{ color: 'var(--text-primary)' }}>{p.student_name}</p>
+                                <p className="text-[10px]" style={{ color: 'var(--text-muted)' }}>{p.department}</p>
+                              </td>
+                              <td className="py-3 px-4">
+                                <div className="flex items-center gap-2 mb-1">
+                                  <span className="text-[10px] uppercase font-black tracking-wider text-brand-400">{p.category_name}</span>
+                                  <span className="text-xs px-1.5 py-0.5 rounded bg-white/10">{p.duration_hours}h</span>
+                                </div>
+                                <p className="font-semibold" style={{ color: 'var(--text-primary)' }}>{p.title}</p>
+                                <p className="text-[11px] mt-0.5 line-clamp-1" style={{ color: 'var(--text-secondary)' }}>{p.description}</p>
+                              </td>
+                              <td className="py-3 px-4 text-right whitespace-nowrap">
+                                <button onClick={() => handleVerify(p.id, 'approved')} className="bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-emerald-500/30 mr-2">
+                                  Approve
+                                </button>
+                                <button onClick={() => handleVerify(p.id, 'rejected')} className="bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all border border-rose-500/30">
+                                  Reject
+                                </button>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

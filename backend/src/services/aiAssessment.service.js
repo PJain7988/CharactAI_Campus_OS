@@ -190,10 +190,18 @@ function computeAssessment(studentId, opts = {}) {
   const strengths = ranked.slice(0, 3).filter(r => r.score > 0).map(r => r.dim);
   const developmentAreas = ranked.slice(-3).map(r => r.dim);
 
+  // Determine Archetype (Clustering Simulation)
+  let archetype = 'Balanced Performer';
+  if (strengths.includes('technical') && strengths.includes('learning')) archetype = 'Technical Innovator';
+  else if (strengths.includes('leadership') || strengths.includes('social')) archetype = 'Leadership Oriented';
+  else if (strengths.includes('academic') && scores.academic > 80) archetype = 'Academic Focused';
+  else if (strengths.includes('extracurricular') || strengths.includes('events') || strengths.includes('cultural')) archetype = 'Extracurricular Focused';
+  else if (scores.sports > 75) archetype = 'Athletic Achiever';
+
   return {
     studentId,
     academicYear: opts.academicYear || 0,
-    scores, overall, strengths, developmentAreas, explanation,
+    scores, overall, strengths, developmentAreas, explanation, archetype,
     modelVersion: MODEL_VERSION,
     evidenceCounts: Object.fromEntries(DIMENSIONS.map(d => [d, ev[d].count]))
   };

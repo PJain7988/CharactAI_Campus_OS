@@ -129,4 +129,20 @@ function syncBiometric(req, res) {
   res.json({ message: `Successfully synced ${newCount} biometric records!`, recordsAdded: newCount });
 }
 
-module.exports = { listCategories, createActivity, listMyActivities, getActivity, deleteActivity, syncBiometric };
+function updateStatus(req, res) {
+  const { id } = req.params;
+  const { status } = req.body; // 'approved' or 'rejected'
+  
+  if (req.user.role !== 'admin') return res.status(403).json({ message: 'Only admins can verify activities.' });
+  if (!['approved', 'rejected'].includes(status)) return res.status(400).json({ message: 'Invalid status.' });
+
+  const activity = db.prepare('SELECT * FROM activities WHERE id = ?').get(id);
+  if (!activity) return res.status(404).json({ message: 'Activity not found.' });
+
+  db.prepare('UPDATE activities SET verification_status = ?, verified_by = ? WHERE id = ?').run(status, req.user.id, id);
+  
+  auditLog(req.user.id, `activity_${status}`, 'activity', id, { status });
+  res.json({ message: `Activity ${status} successfully.` });
+}
+
+module.exports = { listCategories, createActivity, listMyActivities, getActivity, deleteActivity, syncBiometric, updateStatus };

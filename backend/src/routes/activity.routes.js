@@ -9,6 +9,7 @@ router.post('/sync-biometric', requireAuth, roleGuard('student', 'admin'), ctrl.
 router.post('/', requireAuth, roleGuard('student', 'faculty', 'admin'), upload.single('evidence'), ctrl.createActivity);
 router.get('/', requireAuth, ctrl.listMyActivities);
 router.get('/:id', requireAuth, ctrl.getActivity);
+router.put('/:id/status', requireAuth, roleGuard('admin'), ctrl.updateStatus);
 router.delete('/:id', requireAuth, ctrl.deleteActivity);
 
 module.exports = router;

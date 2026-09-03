@@ -37,4 +37,23 @@ function auditTrail(req, res) {
   res.json({ logs: logs.map(l => ({ ...l, meta: JSON.parse(l.meta_json || '{}') })) });
 }
 
-module.exports = { overview, auditTrail };
+function listPendingActivities(req, res) {
+  const activities = db.prepare(`
+    SELECT a.*, c.name AS category_name, s.department, u.name AS student_name
+    FROM activities a 
+    JOIN activity_categories c ON c.id = a.category_id
+    JOIN students s ON s.id = a.student_id
+    JOIN users u ON u.id = s.id
+    WHERE a.verification_status = 'pending'
+    ORDER BY a.activity_date ASC
+  `).all();
+  
+  res.json({
+    activities: activities.map(a => ({
+      ...a,
+      details: a.details_json ? (() => { try { return JSON.parse(a.details_json); } catch { return null; } })() : null
+    }))
+  });
+}
+
+module.exports = { overview, auditTrail, listPendingActivities };

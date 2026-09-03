@@ -193,6 +193,12 @@ export default function StudentDashboard() {
                   <span className="text-xs px-2 py-0.5 rounded-md font-semibold" style={{ background: 'var(--bg-card)', border: '1px solid var(--border)', color: 'var(--text-muted)' }}>
                     {student.department}
                   </span>
+                  {assessment?.archetype && (
+                    <span className="text-xs px-2 py-0.5 rounded-md font-bold" style={{ background: 'rgba(99,102,241,0.1)', border: '1px solid rgba(99,102,241,0.3)', color: '#818cf8' }}>
+                      <Sparkles className="w-3 h-3 inline-block mr-1 mb-0.5" />
+                      {assessment.archetype}
+                    </span>
+                  )}
                 </div>
                 <p className="text-sm mt-2.5 max-w-md leading-relaxed" style={{ color: 'var(--text-secondary)' }}>
                   Tracking <strong style={{ color: 'var(--text-primary)' }}>{activities.length} activities</strong> across{' '}

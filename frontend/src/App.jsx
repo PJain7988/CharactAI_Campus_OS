@@ -8,24 +8,18 @@ import { Sparkles, Sun, Moon, Bell } from 'lucide-react';
 
 import Login from './pages/Login';
 import StudentDashboard from './pages/student/StudentDashboard';
-import StudentPlacements from './pages/student/StudentPlacements';
 import FacultyDashboard from './pages/faculty/FacultyDashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
-import RecruiterDashboard from './pages/recruiter/RecruiterDashboard';
-import PlacementDashboard from './pages/placement/PlacementDashboard';
 import PublicVerify from './pages/verify/PublicVerify';
 
 const ROLE_HOME = {
-  student: '/student', faculty: '/faculty', admin: '/admin',
-  recruiter: '/recruiter', placement_officer: '/placement'
+  student: '/student', faculty: '/faculty', admin: '/admin'
 };
 
 const ROLE_BADGE_COLORS = {
   student: 'bg-brand-500/15 text-brand-400 border-brand-500/30',
   faculty: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
   admin: 'bg-amber-500/15 text-amber-400 border-amber-500/30',
-  recruiter: 'bg-cyan-500/15 text-cyan-400 border-cyan-500/30',
-  placement_officer: 'bg-purple-500/15 text-purple-400 border-purple-500/30',
 };
 
 export default function App() {
@@ -110,11 +104,8 @@ export default function App() {
             <Route path="/verify/:code" element={<PublicVerify />} />
 
             <Route path="/student" element={<ProtectedRoute roles={['student']}><StudentDashboard /></ProtectedRoute>} />
-            <Route path="/student/placements" element={<ProtectedRoute roles={['student']}><StudentPlacements /></ProtectedRoute>} />
             <Route path="/faculty" element={<ProtectedRoute roles={['faculty', 'admin']}><FacultyDashboard /></ProtectedRoute>} />
             <Route path="/admin" element={<ProtectedRoute roles={['admin']}><AdminDashboard /></ProtectedRoute>} />
-            <Route path="/recruiter" element={<ProtectedRoute roles={['recruiter', 'admin']}><RecruiterDashboard /></ProtectedRoute>} />
-            <Route path="/placement" element={<ProtectedRoute roles={['placement_officer', 'admin']}><PlacementDashboard /></ProtectedRoute>} />
 
             <Route path="/" element={<Navigate to={user ? ROLE_HOME[user.role] : '/login'} />} />
             <Route path="*" element={<Navigate to={user ? ROLE_HOME[user.role] : '/login'} />} />

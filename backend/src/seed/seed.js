@@ -290,32 +290,7 @@ async function seed() {
   const adminId = uuidv4();
   await insertUser.run(adminId, 'Institution Admin', 'admin@charactai.edu', await hashPassword('Admin@123'), 'admin');
 
-  const recruiterId = uuidv4();
-  await insertUser.run(recruiterId, 'ABC Technologies Recruiter', 'recruiter@abc-tech.com', await hashPassword('Recruit@123'), 'recruiter');
 
-  const officerId = uuidv4();
-  await insertUser.run(officerId, 'Placement Officer', 'placement@charactai.edu', await hashPassword('Officer@123'), 'placement_officer');
-
-  // Other students for the recruitment demo pool
-  const insertResume = db.prepare('INSERT INTO resumes (id, student_id, raw_text, skills_json) VALUES (?, ?, ?, ?)');
-  const { extractSkills } = require('../services/resumeMatch.service');
-
-  const otherStudentIds = [];
-  for (const s of OTHER_RESUMES) {
-    const id = uuidv4();
-    otherStudentIds.push(id);
-    await insertUser.run(id, s.name, `${s.name.toLowerCase().replace(/\s+/g, '.')}@charactai.edu`, await hashPassword('Student@123'), 'student');
-    insertStudent.run(id, s.code, 'CSE', 'B.Tech Computer Science & Engineering', '2022-2026', 2022, 2026, s.cgpa, s.backlogs);
-    insertResume.run(uuidv4(), id, s.text, JSON.stringify(extractSkills(s.text)));
-  }
-
-  // Priya's own resume
-  const priyaResumeText = `Full stack developer proficient in C++, DSA, OOP, JavaScript, React, Node.js, Express,
-    MongoDB, SQL, DBMS, REST APIs, and Git. Led the CharactAI major project, won Smart India Hackathon 2026,
-    completed a backend development internship, mentored junior students, and coordinated the annual tech fest.
-    Strong communication, leadership, teamwork and problem solving skills demonstrated across four years of
-    verified academic, technical and leadership activities.`;
-  insertResume.run(uuidv4(), studentId, priyaResumeText, JSON.stringify(extractSkills(priyaResumeText)));
 
   // Activities for Priya - most approved, a handful left pending for the faculty demo
   const insertActivity = db.prepare(`
@@ -342,100 +317,12 @@ async function seed() {
 
   console.log(`Inserted ${plan.length} activities for Priya Jain (student).`);
 
-  // Sample job + run through the recruitment pipeline lightly (leave matching to be run from UI/API)
-  const companyId = uuidv4();
-  db.prepare('INSERT INTO companies (id, name, recruiter_user_id) VALUES (?, ?, ?)').run(companyId, 'ABC Technologies', recruiterId);
-
-  const { splitSkillTypes } = require('../services/resumeMatch.service');
-  const allSkills = extractSkills(SAMPLE_JD);
-  const { technical, soft } = splitSkillTypes(allSkills);
-
-  const jobId = uuidv4();
-  db.prepare(`
-    INSERT INTO jobs (
-      id, company_id, title, description, required_skills_json, soft_skills_json,
-      min_cgpa, max_backlogs, graduation_year, branches_json, weights_json, shortlist_size
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(
-    jobId, companyId, 'Trainee Software Engineer', SAMPLE_JD, JSON.stringify(technical), JSON.stringify(soft),
-    7.0, 1, 2027, JSON.stringify(['CSE']),
-    JSON.stringify({ resumeMatch: 0.25, interview: 0.30, problemSolving: 0.20, academics: 0.10, verifiedDevelopment: 0.10, communication: 0.05 }),
-    100
-  );
-
-  console.log('Created sample company "ABC Technologies" with job "Trainee Software Engineer".');
-
-  // ===== Placement Management demo: a drive with a full applied -> rounds -> offer flow =====
-  const driveId = uuidv4();
-  db.prepare(`
-    INSERT INTO placement_drives (
-      id, company_id, job_id, title, description, drive_date, application_deadline, mode,
-      rounds_plan_json, min_cgpa, max_backlogs, graduation_year, branches_json,
-      package_min_lpa, package_max_lpa, status, created_by
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'open', ?)
-  `).run(
-    driveId, companyId, jobId, 'Trainee Software Engineer - Campus Drive 2027',
-    'On-campus placement drive for the 2027 graduating batch. ' + SAMPLE_JD,
-    '2026-12-10', '2026-11-20', 'on-campus',
-    JSON.stringify(['Aptitude', 'Technical', 'HR']),
-    7.0, 1, 2027, JSON.stringify(['CSE']),
-    6.5, 12, officerId
-  );
-  console.log('Created placement drive "Trainee Software Engineer - Campus Drive 2027".');
-
-  const insertRound = db.prepare(`
-    INSERT INTO placement_rounds (id, application_id, round_name, round_type, sequence, status, score, max_score, remarks, evaluated_by)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-  `);
-
-  // Priya applies and clears Aptitude + Technical, HR round is scheduled (a realistic in-progress demo state)
-  const priyaAppId = uuidv4();
-  db.prepare(`INSERT INTO placement_applications (id, drive_id, student_id, status) VALUES (?, ?, ?, 'in_process')`)
-    .run(priyaAppId, driveId, studentId);
-  const priyaApti = uuidv4();
-  insertRound.run(priyaApti, priyaAppId, 'Aptitude', 'aptitude', 1, 'cleared', 92, 100, 'Strong quantitative and logical reasoning.', facultyId);
-  const priyaTech = uuidv4();
-  insertRound.run(priyaTech, priyaAppId, 'Technical', 'technical', 2, 'cleared', 88, 100, 'Solid DSA and system design fundamentals.', facultyId);
-  const priyaHr = uuidv4();
-  insertRound.run(priyaHr, priyaAppId, 'HR', 'hr', 3, 'scheduled', null, 100, null, null);
-  db.prepare(`
-    INSERT INTO interview_schedules (id, round_id, scheduled_date, scheduled_time, mode, location_or_link, interviewer_name, status)
-    VALUES (?, ?, ?, ?, 'online', ?, ?, 'scheduled')
-  `).run(uuidv4(), priyaHr, '2026-12-08', '11:00 AM', 'https://meet.charactai.edu/hr-round', 'Ms. Kavita Rao, HR Manager');
-
-  // Sneha Iyer: full lifecycle demo through to an accepted offer
-  const snehaId = otherStudentIds[3]; // Sneha Iyer is index 3 in OTHER_RESUMES
-  const snehaAppId = uuidv4();
-  db.prepare(`INSERT INTO placement_applications (id, drive_id, student_id, status) VALUES (?, ?, ?, 'offer_accepted')`)
-    .run(snehaAppId, driveId, snehaId);
-  insertRound.run(uuidv4(), snehaAppId, 'Aptitude', 'aptitude', 1, 'cleared', 85, 100, 'Good performance.', facultyId);
-  insertRound.run(uuidv4(), snehaAppId, 'Technical', 'technical', 2, 'cleared', 90, 100, 'Excellent full-stack knowledge.', facultyId);
-  insertRound.run(uuidv4(), snehaAppId, 'HR', 'hr', 3, 'cleared', 87, 100, 'Great communication and culture fit.', officerId);
-  const snehaOfferId = uuidv4();
-  db.prepare(`
-    INSERT INTO placement_offers (id, application_id, student_id, drive_id, designation, ctc_lpa, status)
-    VALUES (?, ?, ?, ?, 'Trainee Software Engineer', 9.5, 'accepted')
-  `).run(snehaOfferId, snehaAppId, snehaId, driveId);
-
-  // Rahul Mehta: rejected after the technical round (realistic negative-path demo state)
-  const rahulId = otherStudentIds[0];
-  const rahulAppId = uuidv4();
-  db.prepare(`INSERT INTO placement_applications (id, drive_id, student_id, status) VALUES (?, ?, ?, 'rejected')`)
-    .run(rahulAppId, driveId, rahulId);
-  insertRound.run(uuidv4(), rahulAppId, 'Aptitude', 'aptitude', 1, 'cleared', 78, 100, 'Adequate performance.', facultyId);
-  insertRound.run(uuidv4(), rahulAppId, 'Technical', 'technical', 2, 'rejected', 52, 100, 'Needs stronger web development fundamentals.', facultyId);
-
-  console.log('Seeded 3 placement applications (in-process, offer-accepted, rejected) for the demo drive.');
 
   console.log('\nDemo logins:');
   console.log('  Student:           priya.jain@charactai.edu / Student@123');
   console.log('  Faculty:           faculty@charactai.edu / Faculty@123');
   console.log('  Admin:             admin@charactai.edu / Admin@123');
-  console.log('  Recruiter:         recruiter@abc-tech.com / Recruit@123');
-  console.log('  Placement Officer: placement@charactai.edu / Officer@123');
   console.log('\nTip: from the Student dashboard, click "Run AI Assessment" then "Generate Certificate".');
-  console.log('Tip: from the Recruiter dashboard, open the sample job and click "Run Matching" then start interviews.');
-  console.log('Tip: from the Placement Officer dashboard, open the sample drive to see applications at every stage.');
   console.log('\nSeed complete.');
 }
 

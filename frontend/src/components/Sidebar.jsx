@@ -16,8 +16,7 @@ export default function Sidebar() {
 
   const getLinks = () => {
     if (user.role === 'student') return [
-      { to: '/student', icon: LayoutDashboard, label: 'Dashboard' },
-      { to: '/student/placements', icon: Building2, label: 'Placements' },
+      { to: '/student', icon: LayoutDashboard, label: 'Dashboard' }
     ];
     if (user.role === 'faculty') return [
       { to: '/faculty', icon: UserCheck, label: 'Verify' },
@@ -25,12 +24,7 @@ export default function Sidebar() {
     if (user.role === 'admin') return [
       { to: '/admin', icon: LayoutDashboard, label: 'Overview' },
     ];
-    if (user.role === 'recruiter') return [
-      { to: '/recruiter', icon: BrainCircuit, label: 'AI Recruit' },
-    ];
-    if (user.role === 'placement_officer') return [
-      { to: '/placement', icon: ClipboardList, label: 'Placements' },
-    ];
+
     return [];
   };
 

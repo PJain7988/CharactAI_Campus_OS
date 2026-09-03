@@ -357,6 +357,7 @@ export default function StudentDashboard() {
               <LogActivityForm
                 categories={categories}
                 studentId={student.id}
+                userName={user.name}
                 academicYear={student.batch ? Math.min(4, Math.max(1, new Date().getFullYear() - parseInt(student.batch.split('-')[0]) + 1)) : 1}
                 onSuccess={() => { load(); setMessage('✓ Activity submitted for faculty verification!'); setActiveTab('activities'); }}
               />
@@ -783,11 +784,12 @@ export default function StudentDashboard() {
 
 /* ─────────────────────── Log Activity Form ─────────────────────────────── */
 
-function LogActivityForm({ categories, onSuccess, academicYear }) {
+function LogActivityForm({ categories, onSuccess, academicYear, userName }) {
   const [step, setStep]           = useState(1);
   const [selectedCat, setSelectedCat] = useState(null);
   const [busy, setBusy]           = useState(false);
   const [error, setError]         = useState('');
+  const [showScanner, setShowScanner] = useState(false);
   const [form, setForm]           = useState({
     title: '', description: '', activityDate: new Date().toISOString().split('T')[0],
     academicYear: academicYear || 1, durationHours: '', role: '', achievement: '',
@@ -1084,13 +1086,21 @@ function LogActivityForm({ categories, onSuccess, academicYear }) {
 
             <div className="flex gap-3 mt-5">
               <button onClick={() => setStep(2)} className="btn-secondary flex items-center gap-2"><ChevronLeft className="w-4 h-4" />Edit</button>
-              <button onClick={handleSubmit} disabled={busy} className="btn-primary flex-1 flex items-center justify-center gap-2 py-3">
-                {busy ? <><RefreshCw className="w-4 h-4 animate-spin" />Submitting…</> : <><CheckCircle className="w-4 h-4" />Submit Activity</>}
+              <button onClick={() => setShowScanner(true)} disabled={busy} className="btn-primary flex-1 flex items-center justify-center gap-2 py-3">
+                {busy ? <><RefreshCw className="w-4 h-4 animate-spin" />Submitting…</> : <><CheckCircle className="w-4 h-4" />Scan Face to Submit</>}
               </button>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
+
+      {showScanner && (
+        <BiometricScannerModal 
+          onClose={() => setShowScanner(false)} 
+          onSuccess={() => { setShowScanner(false); handleSubmit(); }} 
+          userName={userName} 
+        />
+      )}
     </div>
   );
 }

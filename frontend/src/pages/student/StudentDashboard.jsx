@@ -72,6 +72,7 @@ export default function StudentDashboard() {
   const [message,         setMessage]         = useState('');
   const [activeTab,       setActiveTab]       = useState('dashboard');
   const [filterCat,       setFilterCat]       = useState('All');
+  const [showScanner,     setShowScanner]     = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -186,8 +187,8 @@ export default function StudentDashboard() {
                   <strong style={{ color: 'var(--text-primary)' }}>12 dimensions</strong> — library, classes, sports, events & more.
                 </p>
                 <div className="mt-4">
-                  <button onClick={syncBiometric} disabled={busy} className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
-                    {busy ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 text-brand-400" />}
+                  <button onClick={() => setShowScanner(true)} disabled={busy} className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                    {busy ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <Shield className="w-3.5 h-3.5 text-brand-400" />}
                     Simulate Biometric Auto-Sync
                   </button>
                 </div>
@@ -768,6 +769,14 @@ export default function StudentDashboard() {
           </motion.div>
         </AnimatePresence>
       </div>
+
+      {showScanner && (
+        <BiometricScannerModal 
+          onClose={() => setShowScanner(false)} 
+          onSuccess={syncBiometric} 
+          userName={user.name} 
+        />
+      )}
     </div>
   );
 }
@@ -1313,6 +1322,107 @@ function Msg({ text }) {
     <div className="text-sm p-4 rounded-xl flex items-center gap-2"
       style={{ background: ok ? 'rgba(16,185,129,0.08)' : 'rgba(239,68,68,0.08)', border: `1px solid ${ok ? 'rgba(16,185,129,0.25)' : 'rgba(239,68,68,0.25)'}`, color: ok ? '#34d399' : '#f87171' }}>
       {text}
+    </div>
+  );
+}
+
+/* ─────────────────────── Biometric Scanner Modal ─────────────────────────────── */
+
+function BiometricScannerModal({ onClose, onSuccess, userName }) {
+  const videoRef = React.useRef(null);
+  const [status, setStatus] = useState('initializing'); // initializing, scanning, matched
+  const [stream, setStream] = useState(null);
+
+  useEffect(() => {
+    // Start webcam
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: 'user' } })
+      .then(s => {
+        setStream(s);
+        if (videoRef.current) videoRef.current.srcObject = s;
+        setStatus('scanning');
+        
+        // Simulate a 3-second face match
+        setTimeout(() => {
+          setStatus('matched');
+          setTimeout(() => {
+            s.getTracks().forEach(t => t.stop()); // kill camera
+            onSuccess();
+            onClose();
+          }, 1500); // Wait 1.5s after match before closing
+        }, 3000);
+      })
+      .catch(err => {
+        setStatus('error');
+      });
+
+    return () => {
+      if (stream) stream.getTracks().forEach(t => t.stop());
+    };
+  }, []);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+      <motion.div initial={{ scale: 0.9, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+        className="relative w-full max-w-md rounded-3xl overflow-hidden bg-slate-900 border border-slate-700 shadow-2xl">
+        
+        {/* Header */}
+        <div className="absolute top-4 left-4 right-4 z-10 flex justify-between items-center">
+          <div className="bg-black/50 backdrop-blur px-3 py-1.5 rounded-full border border-white/10 flex items-center gap-2">
+            <Shield className="w-4 h-4 text-cyan-400" />
+            <span className="text-xs font-bold text-white uppercase tracking-wider">Bio-Sync</span>
+          </div>
+          <button onClick={() => { if(stream) stream.getTracks().forEach(t => t.stop()); onClose(); }} className="w-8 h-8 rounded-full bg-black/50 border border-white/10 flex items-center justify-center text-white hover:bg-white/20">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* Video feed */}
+        <div className="relative aspect-[3/4] w-full bg-black">
+          {status === 'initializing' && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-white/50">
+              <RefreshCw className="w-8 h-8 animate-spin mb-3" />
+              <p className="text-xs">Accessing Secure Camera...</p>
+            </div>
+          )}
+          {status === 'error' && (
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-red-400">
+              <Shield className="w-8 h-8 mb-3" />
+              <p className="text-xs">Camera access denied.</p>
+            </div>
+          )}
+
+          <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
+
+          {/* Scanner UI overlays */}
+          {status === 'scanning' && (
+            <>
+              {/* Laser line */}
+              <div className="absolute left-0 right-0 h-0.5 bg-cyan-400 animate-laser z-20" />
+              {/* Corner brackets */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-64 z-10">
+                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-cyan-400 rounded-tl-xl" />
+                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-cyan-400 rounded-tr-xl" />
+                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-cyan-400 rounded-bl-xl" />
+                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-cyan-400 rounded-br-xl" />
+              </div>
+              <div className="absolute bottom-6 left-0 right-0 text-center z-10">
+                <p className="text-xs font-mono text-cyan-400 animate-pulse tracking-widest bg-black/40 inline-block px-3 py-1 rounded">SCANNING FACIAL MARKERS...</p>
+              </div>
+            </>
+          )}
+
+          {status === 'matched' && (
+            <div className="absolute inset-0 bg-emerald-500/20 z-20 flex flex-col items-center justify-center backdrop-blur-sm">
+              <div className="w-20 h-20 rounded-full bg-emerald-500 flex items-center justify-center mb-4 border-4 border-emerald-300 shadow-[0_0_40px_rgba(16,185,129,0.8)]">
+                <CheckCircle className="w-10 h-10 text-white" />
+              </div>
+              <p className="text-sm font-black text-white tracking-wider">IDENTITY VERIFIED</p>
+              <p className="text-xl font-bold text-emerald-300 mt-1">{userName}</p>
+              <p className="text-xs text-white/70 mt-2 font-mono">Syncing institutional data...</p>
+            </div>
+          )}
+        </div>
+      </motion.div>
     </div>
   );
 }

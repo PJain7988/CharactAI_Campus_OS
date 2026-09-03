@@ -16,15 +16,17 @@ async function generate(req, res) {
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(studentId);
   if (!student || !user) return res.status(404).json({ message: 'Student not found.' });
 
+  const certificateType = req.body.certificateType || 'Overall Holistic Development';
+
   const assessment = computeAssessment(studentId);
   saveAssessment(assessment);
   const narrative = buildNarrative(assessment, assessment.evidenceCounts);
 
-  const certificateCode = generateCertificateCode();
+  const certificateCode = generateCertificateCode(certificateType);
   const verifyBase = process.env.PUBLIC_VERIFY_BASE_URL || 'http://localhost:5173/verify';
   const verifyUrl = `${verifyBase}/${certificateCode}`;
 
-  const filePath = await generateCertificatePdf({ student, user, assessment, narrative, certificateCode, verifyUrl });
+  const filePath = await generateCertificatePdf({ student, user, assessment, narrative, certificateCode, verifyUrl, certificateType });
 
   const id = uuidv4();
   db.prepare(`

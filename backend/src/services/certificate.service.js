@@ -7,10 +7,11 @@ const { v4: uuidv4 } = require('uuid');
 const certDir = path.join(__dirname, '..', '..', 'uploads', 'certificates');
 fs.mkdirSync(certDir, { recursive: true });
 
-function generateCertificateCode() {
+function generateCertificateCode(type = 'HOLISTIC') {
   const year = new Date().getFullYear();
   const rand = uuidv4().split('-')[0].toUpperCase();
-  return `CHAI-${year}-${rand}`;
+  const prefix = type === 'Overall Holistic' ? 'HOL' : type.substring(0, 4).toUpperCase();
+  return `CHAI-${prefix}-${year}-${rand}`;
 }
 
 /**
@@ -18,7 +19,7 @@ function generateCertificateCode() {
  * as a PDF with an embedded QR code pointing at the public, privacy-safe
  * verification page.
  */
-async function generateCertificatePdf({ student, user, assessment, narrative, certificateCode, verifyUrl }) {
+async function generateCertificatePdf({ student, user, assessment, narrative, certificateCode, verifyUrl, certificateType = 'Holistic Development' }) {
   const filePath = path.join(certDir, `${certificateCode}.pdf`);
   const qrDataUrl = await QRCode.toDataURL(verifyUrl, { margin: 1, width: 200 });
   const qrBuffer = Buffer.from(qrDataUrl.split(',')[1], 'base64');
@@ -33,7 +34,7 @@ async function generateCertificatePdf({ student, user, assessment, narrative, ce
       .fontSize(10).font('Helvetica').text('CharactAI', { align: 'center' })
       .moveDown(0.2)
       .fontSize(22).font('Helvetica-Bold')
-      .text('CERTIFICATE OF HOLISTIC STUDENT DEVELOPMENT', { align: 'center' })
+      .text(`CERTIFICATE OF ${certificateType.toUpperCase()}`, { align: 'center' })
       .moveDown(1);
 
     doc

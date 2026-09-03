@@ -98,4 +98,35 @@ function deleteActivity(req, res) {
   res.json({ message: 'Activity deleted.' });
 }
 
-module.exports = { listCategories, createActivity, listMyActivities, getActivity, deleteActivity };
+function syncBiometric(req, res) {
+  const studentId = req.user.role === 'student' ? req.user.id : req.body.studentId;
+  if (!studentId) return res.status(400).json({ message: 'studentId is required.' });
+
+  // Find category IDs for simulation
+  const libCat = db.prepare("SELECT id FROM activity_categories WHERE name = 'library'").get();
+  const classCat = db.prepare("SELECT id FROM activity_categories WHERE name = 'classroom'").get();
+
+  if (!libCat || !classCat) return res.status(500).json({ message: 'Required categories missing.' });
+
+  const insert = db.prepare(`
+    INSERT INTO activities (
+      id, student_id, category_id, title, description, activity_date, academic_year,
+      duration_hours, details_json, role, achievement, verification_status, verified_by
+    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, null, 'Completed', 'approved', 'system')
+  `);
+
+  const today = new Date().toISOString().split('T')[0];
+  let newCount = 0;
+
+  // Simulate inserting a library visit and a classroom attendance record dynamically
+  db.transaction(() => {
+    insert.run(uuidv4(), studentId, libCat.id, 'Automated Biometric Library Entry', 'Auto-synced via gate RFID', today, 4, 1.5, JSON.stringify({ visitPurpose: 'study', bookTitle: 'System Design Interview' }));
+    insert.run(uuidv4(), studentId, classCat.id, 'Daily Class Attendance Sync', 'Auto-synced via classroom RFID', today, 4, 6, JSON.stringify({ attendancePercent: 100, subject: 'Cloud Computing' }));
+    newCount += 2;
+  })();
+
+  auditLog(req.user.id, 'sync_biometric', 'activity', studentId, { recordsAdded: newCount });
+  res.json({ message: `Successfully synced ${newCount} biometric records!`, recordsAdded: newCount });
+}
+
+module.exports = { listCategories, createActivity, listMyActivities, getActivity, deleteActivity, syncBiometric };

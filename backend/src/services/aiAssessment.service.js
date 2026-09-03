@@ -115,20 +115,36 @@ function computeAssessment(studentId, opts = {}) {
 
   // Initialize evidence buckets
   const ev = {};
-  DIMENSIONS.forEach(d => { ev[d] = { count: 0, bonus: 0, samples: [] }; });
+  DIMENSIONS.forEach(d => { ev[d] = { count: 0, bonus: 0, samples: [], books: 0, certs: 0, roles: 0, projects: 0 }; });
 
   for (const act of activities) {
     const dims = CATEGORY_DIMENSION_MAP[act.category_name] || [];
     let bonus = bonusForAchievement(act.achievement) + bonusForRole(act.role);
 
-    // Category-specific bonuses
+    // Category-specific bonuses & tracking
     if (act.category_name === 'events') bonus += bonusForEventLevel(act.details_json);
-    if (['library', 'learning'].includes(act.category_name)) bonus += bonusForBooksRead(act.details_json);
+    
+    let booksInAct = 0;
+    if (['library', 'learning'].includes(act.category_name)) {
+      bonus += bonusForBooksRead(act.details_json);
+      try {
+        const d = JSON.parse(act.details_json || '{}');
+        if (d.bookTitle) booksInAct = 1;
+      } catch {}
+    }
+
+    const isCert = act.title.toLowerCase().includes('certificat');
+    const isProject = act.title.toLowerCase().includes('project') || act.title.toLowerCase().includes('hackathon');
+    const hasRole = act.role && act.role.toLowerCase() !== 'participant';
 
     for (const dim of dims) {
       if (!ev[dim]) continue;
       ev[dim].count += 1;
       ev[dim].bonus += bonus;
+      ev[dim].books += booksInAct;
+      if (isCert) ev[dim].certs += 1;
+      if (isProject) ev[dim].projects += 1;
+      if (hasRole) ev[dim].roles += 1;
       if (ev[dim].samples.length < 5) ev[dim].samples.push(act.title);
     }
   }
@@ -146,11 +162,16 @@ function computeAssessment(studentId, opts = {}) {
     if (e.count === 0) {
       explanation[dim] = `No verified ${dim} activities recorded yet.`;
     } else {
+      const parts = [`${e.count} verified ${dim}-related activit${e.count === 1 ? 'y' : 'ies'}`];
+      if (e.books > 0) parts.push(`${e.books} books/research materials read`);
+      if (e.certs > 0) parts.push(`${e.certs} certifications completed`);
+      if (e.projects > 0) parts.push(`${e.projects} projects/hackathons`);
+      if (e.roles > 0) parts.push(`${e.roles} leadership or core team roles`);
+
       explanation[dim] =
         `${dim.charAt(0).toUpperCase() + dim.slice(1)} score of ${withBonus}/100 ` +
-        `based on ${e.count} verified activit${e.count === 1 ? 'y' : 'ies'}` +
-        (e.bonus > 0 ? `, boosted by achievements, leadership roles, or event levels` : '') +
-        (e.samples.length ? `. Examples: ${e.samples.slice(0, 3).join('; ')}.` : '.');
+        `was influenced by ${parts.join(', ')}.` +
+        (e.samples.length ? ` Key examples include: ${e.samples.slice(0, 3).join(', ')}.` : '');
     }
   }
 

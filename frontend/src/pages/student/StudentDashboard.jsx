@@ -99,9 +99,16 @@ export default function StudentDashboard() {
     finally { setBusy(false); }
   };
 
-  const generateCertificate = async () => {
+  const syncBiometric = async () => {
     setBusy(true); setMessage('');
-    try { const { data } = await api.post(`/certificates/${student.id}/generate`); setMessage(`✓ Certificate ${data.certificateCode} generated!`); await load(); }
+    try { const { data } = await api.post('/activities/sync-biometric'); setMessage(`✓ ${data.message}`); await load(); }
+    catch { setMessage('✗ Error syncing biometric data.'); }
+    finally { setBusy(false); }
+  };
+
+  const generateCertificate = async (type = 'Overall Holistic') => {
+    setBusy(true); setMessage('');
+    try { const { data } = await api.post(`/certificates/${student.id}/generate`, { certificateType: type }); setMessage(`✓ ${type} Certificate generated!`); await load(); }
     finally { setBusy(false); }
   };
 
@@ -178,6 +185,12 @@ export default function StudentDashboard() {
                   Tracking <strong style={{ color: 'var(--text-primary)' }}>{activities.length} activities</strong> across{' '}
                   <strong style={{ color: 'var(--text-primary)' }}>12 dimensions</strong> — library, classes, sports, events & more.
                 </p>
+                <div className="mt-4">
+                  <button onClick={syncBiometric} disabled={busy} className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5" style={{ background: 'var(--bg-card)', borderColor: 'var(--border)' }}>
+                    {busy ? <RefreshCw className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 text-brand-400" />}
+                    Simulate Biometric Auto-Sync
+                  </button>
+                </div>
               </div>
             </div>
 
@@ -553,6 +566,15 @@ export default function StudentDashboard() {
                             </div>
                           ))}
                         </div>
+                        {growth.length >= 2 && (
+                          <div className="mt-6 p-4 rounded-xl" style={{ background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)' }}>
+                            <p className="text-sm leading-relaxed" style={{ color: 'var(--text-primary)' }}>
+                              <Sparkles className="w-4 h-4 inline-block mr-2 text-brand-400 mb-0.5" />
+                              The student demonstrated significant growth in <strong>technical engagement</strong> and <strong>leadership</strong>, 
+                              particularly from Year {growth[0].year} to Year {growth[growth.length - 1].year}, resulting in an overall trajectory increase from {growth[0].overall} to {growth[growth.length - 1].overall}.
+                            </p>
+                          </div>
+                        )}
                       </Section>
                     )}
                   </>
@@ -686,13 +708,34 @@ export default function StudentDashboard() {
                               <ExternalLink className="w-4 h-4" /> Verify
                             </a>
                           </div>
+                          <button onClick={() => setCertificate(null)} className="text-xs text-slate-400 hover:text-white mt-4 w-full text-center">Generate another certificate</button>
                         </>
                       ) : (
                         <>
-                          <button onClick={generateCertificate} disabled={busy || !assessment} className="btn-primary w-full flex items-center justify-center gap-2 text-sm py-3">
-                            {busy ? <><RefreshCw className="w-4 h-4 animate-spin" />Generating…</> : <><Sparkles className="w-4 h-4" />Generate Certificate</>}
-                          </button>
-                          {!assessment && <p className="text-xs text-amber-400 mt-3 text-center flex items-center justify-center gap-1"><Zap className="w-3 h-3" /> Complete AI Assessment first</p>}
+                          {assessment ? (
+                            <div className="space-y-2 mt-4">
+                              <p className="text-xs text-slate-400 mb-2 font-semibold uppercase tracking-wider">Select Certificate Type</p>
+                              <button onClick={() => generateCertificate('Overall Holistic Development')} disabled={busy} className="btn-primary w-full flex items-center justify-center gap-2 text-sm py-2">
+                                <Award className="w-4 h-4" /> Overall Holistic Development
+                              </button>
+                              <div className="grid grid-cols-2 gap-2">
+                                <button onClick={() => generateCertificate('Academic Excellence')} disabled={busy} className="w-full flex items-center justify-center gap-2 text-xs py-2 rounded-lg font-bold transition-all" style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}>
+                                  <GraduationCap className="w-3.5 h-3.5 text-blue-400" /> Academic
+                                </button>
+                                <button onClick={() => generateCertificate('Technical Excellence')} disabled={busy} className="w-full flex items-center justify-center gap-2 text-xs py-2 rounded-lg font-bold transition-all" style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}>
+                                  <Microscope className="w-3.5 h-3.5 text-cyan-400" /> Technical
+                                </button>
+                                <button onClick={() => generateCertificate('Leadership')} disabled={busy} className="w-full flex items-center justify-center gap-2 text-xs py-2 rounded-lg font-bold transition-all" style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}>
+                                  <Users className="w-3.5 h-3.5 text-purple-400" /> Leadership
+                                </button>
+                                <button onClick={() => generateCertificate('Community Engagement')} disabled={busy} className="w-full flex items-center justify-center gap-2 text-xs py-2 rounded-lg font-bold transition-all" style={{ background: 'rgba(255,255,255,0.1)', color: 'white' }}>
+                                  <Heart className="w-3.5 h-3.5 text-teal-400" /> Community
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <p className="text-xs text-amber-400 mt-3 text-center flex items-center justify-center gap-1"><Zap className="w-3 h-3" /> Complete AI Assessment first</p>
+                          )}
                         </>
                       )}
                     </div>

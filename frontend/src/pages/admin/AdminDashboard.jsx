@@ -7,7 +7,9 @@ import api from '../../api/client';
 const TABS = [
   { id: 'overview', label: 'Institution Overview', icon: LayoutDashboard },
   { id: 'verification', label: 'Verification Queue', icon: ShieldAlert },
-  { id: 'analytics', label: 'Detailed Analytics', icon: Activity },
+  { id: 'users', label: 'User Management', icon: Users },
+  { id: 'categories', label: 'Categories & Events', icon: Award },
+  { id: 'config', label: 'AI Configuration', icon: Activity },
   { id: 'audit', label: 'Audit Logs', icon: TerminalSquare }
 ];
 
@@ -247,16 +249,14 @@ export default function AdminDashboard() {
               </div>
             )}
 
-            {/* ANALYTICS TAB */}
-            {activeTab === 'analytics' && (
-              <div className="card text-center py-20 flex flex-col items-center justify-center">
-                <div className="w-20 h-20 rounded-full flex items-center justify-center mb-6" style={{ background: 'rgba(99,102,241,0.1)' }}>
-                  <Activity className="w-10 h-10 text-brand-400" />
-                </div>
-                <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>Detailed Analytics Engine</h3>
-                <p className="max-w-md mx-auto text-sm" style={{ color: 'var(--text-secondary)' }}>This module connects to the advanced data warehouse for deeper cohort analysis and institutional growth tracking.</p>
-              </div>
-            )}
+            {/* USERS TAB */}
+            {activeTab === 'users' && <AdminUsersTab />}
+
+            {/* CATEGORIES TAB */}
+            {activeTab === 'categories' && <AdminCategoriesTab />}
+
+            {/* CONFIG TAB */}
+            {activeTab === 'config' && <AdminConfigTab />}
 
             {/* AUDIT TAB */}
             {activeTab === 'audit' && (
@@ -334,5 +334,152 @@ function StatTile({ icon: Icon, label, value, color }) {
         <p className="text-[10px] font-bold uppercase tracking-wider" style={{ color: 'var(--text-muted)' }}>{label}</p>
       </div>
     </motion.div>
+  );
+}
+
+function AdminUsersTab() {
+  const [users, setUsers] = useState([]);
+  
+  const load = () => api.get('/admin/users').then(({data}) => setUsers(data.users));
+  useEffect(() => { load(); }, []);
+
+  const del = async (id) => {
+    if (confirm('Delete this user?')) {
+      await api.delete(`/admin/users/${id}`);
+      load();
+    }
+  };
+
+  return (
+    <div className="card">
+      <h2 className="font-bold text-base mb-6 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+        <Users className="w-5 h-5 text-brand-400" /> User Management
+      </h2>
+      <div className="rounded-2xl overflow-hidden shadow-inner" style={{ border: '1px solid var(--border)' }}>
+        <table className="w-full text-left text-sm">
+          <thead style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+            <tr>
+              <th className="py-3 px-4 uppercase text-xs">Name</th>
+              <th className="py-3 px-4 uppercase text-xs">Email</th>
+              <th className="py-3 px-4 uppercase text-xs">Role</th>
+              <th className="py-3 px-4 text-right uppercase text-xs">Action</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y" style={{ divideColor: 'var(--border)' }}>
+            {users.map(u => (
+              <tr key={u.id} className="hover:bg-white/5 transition-colors">
+                <td className="py-3 px-4 font-bold" style={{ color: 'var(--text-primary)' }}>{u.name}</td>
+                <td className="py-3 px-4 text-xs" style={{ color: 'var(--text-secondary)' }}>{u.email}</td>
+                <td className="py-3 px-4"><span className="text-[10px] uppercase font-black text-brand-400 bg-brand-500/10 px-2 py-1 rounded">{u.role}</span></td>
+                <td className="py-3 px-4 text-right">
+                  <button onClick={() => del(u.id)} className="text-xs font-bold text-rose-400 hover:text-rose-300">Delete</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function AdminCategoriesTab() {
+  const [categories, setCategories] = useState([]);
+  const [events, setEvents] = useState([]);
+  
+  const loadC = () => api.get('/admin/categories').then(({data}) => setCategories(data.categories));
+  const loadE = () => api.get('/admin/events').then(({data}) => setEvents(data.events));
+  
+  useEffect(() => { loadC(); loadE(); }, []);
+
+  return (
+    <div className="space-y-6">
+      <div className="card">
+        <h2 className="font-bold text-base mb-6 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+          <Award className="w-5 h-5 text-emerald-400" /> Activity Categories
+        </h2>
+        <div className="flex flex-wrap gap-2">
+          {categories.map(c => (
+            <div key={c.id} className="px-4 py-2 rounded-xl text-xs font-bold border" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)', color: 'var(--text-primary)' }}>
+              {c.name}
+            </div>
+          ))}
+        </div>
+      </div>
+      
+      <div className="card">
+        <h2 className="font-bold text-base mb-6 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+          <Activity className="w-5 h-5 text-amber-400" /> Global Events
+        </h2>
+        <div className="rounded-2xl overflow-hidden shadow-inner" style={{ border: '1px solid var(--border)' }}>
+          <table className="w-full text-left text-sm">
+            <thead style={{ background: 'var(--bg-surface)', borderBottom: '1px solid var(--border)', color: 'var(--text-muted)' }}>
+              <tr>
+                <th className="py-3 px-4 uppercase text-xs">Title</th>
+                <th className="py-3 px-4 uppercase text-xs">Date</th>
+                <th className="py-3 px-4 uppercase text-xs">Category</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y" style={{ divideColor: 'var(--border)' }}>
+              {events.length === 0 && <tr><td colSpan="3" className="py-6 text-center text-xs text-slate-500">No events defined.</td></tr>}
+              {events.map(e => (
+                <tr key={e.id} className="hover:bg-white/5 transition-colors">
+                  <td className="py-3 px-4 font-bold" style={{ color: 'var(--text-primary)' }}>{e.title}</td>
+                  <td className="py-3 px-4 text-xs font-mono" style={{ color: 'var(--text-secondary)' }}>{e.event_date}</td>
+                  <td className="py-3 px-4 text-xs font-bold text-brand-400">{e.category_name}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function AdminConfigTab() {
+  const [weights, setWeights] = useState({});
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.get('/admin/settings').then(({data}) => {
+      setWeights(data.settings.ai_dimension_weights || {});
+      setLoading(false);
+    });
+  }, []);
+
+  const save = async () => {
+    await api.put('/admin/settings', { key: 'ai_dimension_weights', value: weights });
+    alert('AI Weights updated successfully');
+  };
+
+  if (loading) return null;
+
+  return (
+    <div className="card">
+      <h2 className="font-bold text-base mb-6 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+        <Activity className="w-5 h-5 text-brand-400" /> AI Scoring Weights Configuration
+      </h2>
+      <p className="text-xs mb-6" style={{ color: 'var(--text-secondary)' }}>Adjust the impact of each dimension on the final holistic score.</p>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {Object.entries(weights).map(([dim, val]) => (
+          <div key={dim}>
+            <label className="text-[10px] font-bold uppercase tracking-wider mb-2 block" style={{ color: 'var(--text-muted)' }}>
+              {dim.replace(/_/g, ' ')} ({val}%)
+            </label>
+            <input 
+              type="range" min="0" max="30" value={val} 
+              onChange={e => setWeights({...weights, [dim]: parseInt(e.target.value)})}
+              className="w-full accent-brand-500" 
+            />
+          </div>
+        ))}
+      </div>
+      
+      <button onClick={save} className="btn py-2.5 px-6 text-sm font-bold text-white shadow-lg bg-brand-500 hover:bg-brand-400 transition-all">
+        Save AI Configuration
+      </button>
+    </div>
   );
 }

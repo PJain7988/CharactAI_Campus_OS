@@ -502,6 +502,16 @@ function ActivitiesTab({ approved, pending, rejected, activities, filtered, filt
                     {a.details.sport              && <InfoChip label={a.details.sport} prefix="⚽" />}
                     {a.details.gameName           && <InfoChip label={a.details.gameName} prefix="♟" />}
                     {a.details.skillsLearned?.length > 0 && <InfoChip label={a.details.skillsLearned.slice(0, 2).join(', ')} prefix="💡" />}
+                    
+                    {a.details.academicAttendance && <InfoChip label={`${a.details.academicAttendance}% Attd`} prefix="✅" />}
+                    {a.details.semesterResults    && <InfoChip label={a.details.semesterResults} prefix="🎓" />}
+                    {a.details.projectSubmissions && <InfoChip label={`${a.details.projectSubmissions} Projects`} prefix="🚀" />}
+                    {a.details.presentations      && <InfoChip label={`${a.details.presentations} Presentations`} prefix="🗣" />}
+                    
+                    {a.details.libraryVisits      && <InfoChip label={`${a.details.libraryVisits} Visits`} prefix="🏛" />}
+                    {a.details.booksCompleted     && <InfoChip label={`${a.details.booksCompleted} Books`} prefix="📚" />}
+                    {a.details.certifications     && <InfoChip label={`${a.details.certifications} Certs`} prefix="🏅" />}
+                    {a.details.onlineCourses      && <InfoChip label={`${a.details.onlineCourses} Courses`} prefix="💻" />}
                   </div>
                 )}
               </div>
@@ -898,6 +908,12 @@ function LogActivityForm({ categories, onSuccess, academicYear }) {
     gameName: '', gameLevel: 'Beginner', gameSkills: '',
     eventName: '', eventLevel: 'College', eventOutcome: '',
     organization: '', serviceHours: '', beneficiaries: '',
+    academicAttendance: '', academicClasses: '', assignmentsCompleted: '', internalAssessments: '',
+    semesterResults: '', projectSubmissions: '', presentations: '', vivaPerformance: '',
+    academicCompetitions: '', researchActivities: '',
+    libraryVisits: '', booksBorrowed: '', booksCompleted: '', readingDuration: '',
+    technicalBooks: '', nonFictionBooks: '', researchPapersRead: '', onlineCourses: '',
+    certifications: '', workshops: '', seminars: '',
   });
 
   const F = (k, v) => setForm(f => ({ ...f, [k]: v }));
@@ -907,7 +923,21 @@ function LogActivityForm({ categories, onSuccess, academicYear }) {
   const buildDetails = () => {
     if (!selectedCat) return null;
     switch (selectedCat.id) {
-      case 'library':   return { bookTitle: form.bookTitle, author: form.author, pagesRead: +form.pagesRead || null, topic: form.topic, visitPurpose: form.visitPurpose };
+      case 'academic': return {
+        academicAttendance: +form.academicAttendance || null, academicClasses: +form.academicClasses || null,
+        assignmentsCompleted: +form.assignmentsCompleted || null, internalAssessments: form.internalAssessments,
+        semesterResults: form.semesterResults, projectSubmissions: +form.projectSubmissions || null,
+        presentations: +form.presentations || null, vivaPerformance: form.vivaPerformance,
+        academicCompetitions: +form.academicCompetitions || null, researchActivities: +form.researchActivities || null
+      };
+      case 'learning':
+      case 'library': return {
+        libraryVisits: +form.libraryVisits || null, booksBorrowed: +form.booksBorrowed || null,
+        booksCompleted: +form.booksCompleted || null, readingDuration: +form.readingDuration || null,
+        technicalBooks: +form.technicalBooks || null, nonFictionBooks: +form.nonFictionBooks || null,
+        researchPapersRead: +form.researchPapersRead || null, onlineCourses: +form.onlineCourses || null,
+        certifications: +form.certifications || null, workshops: +form.workshops || null, seminars: +form.seminars || null
+      };
       case 'classroom': return { attendancePercent: +form.attendancePercent || null, totalClasses: +form.totalClasses || null, attended: +form.attended || null, participationType: form.participationType };
       case 'sports':    return { sport: form.sport, trainingType: form.trainingType, coach: form.coach, skillsLearned: form.skillsLearned ? form.skillsLearned.split(',').map(s => s.trim()) : [] };
       case 'games':     return { gameName: form.gameName, level: form.gameLevel, skillsLearned: form.gameSkills ? form.gameSkills.split(',').map(s => s.trim()) : [] };
@@ -945,10 +975,12 @@ function LogActivityForm({ categories, onSuccess, academicYear }) {
     form.role         ? ['Role',         form.role]        : null,
     form.achievement  ? ['Achievement',  form.achievement] : null,
     form.durationHours? ['Duration',     `${form.durationHours} hours`] : null,
-    selectedCat?.id === 'library'   && form.bookTitle          ? ['Book',       form.bookTitle]                            : null,
-    selectedCat?.id === 'library'   && form.author             ? ['Author',     form.author]                               : null,
-    selectedCat?.id === 'library'   && form.pagesRead          ? ['Pages',      form.pagesRead]                            : null,
-    selectedCat?.id === 'library'   && form.topic              ? ['Topic',      form.topic]                                : null,
+    selectedCat?.id === 'academic'  && form.academicAttendance ? ['Attendance', `${form.academicAttendance}%`]                 : null,
+    selectedCat?.id === 'academic'  && form.projectSubmissions ? ['Projects', form.projectSubmissions]                         : null,
+    selectedCat?.id === 'academic'  && form.presentations      ? ['Presentations', form.presentations]                         : null,
+    (selectedCat?.id === 'learning' || selectedCat?.id === 'library') && form.libraryVisits ? ['Library Visits', form.libraryVisits] : null,
+    (selectedCat?.id === 'learning' || selectedCat?.id === 'library') && form.booksCompleted ? ['Books Read', form.booksCompleted]   : null,
+    (selectedCat?.id === 'learning' || selectedCat?.id === 'library') && form.certifications ? ['Certifications', form.certifications] : null,
     selectedCat?.id === 'classroom' && form.attendancePercent  ? ['Attendance', `${form.attendancePercent}%`]              : null,
     selectedCat?.id === 'classroom' && form.totalClasses       ? ['Classes',    `${form.attended}/${form.totalClasses}`]   : null,
     selectedCat?.id === 'sports'    && form.sport              ? ['Sport',      form.sport]                                : null,
@@ -1070,23 +1102,50 @@ function LogActivityForm({ categories, onSuccess, academicYear }) {
               </div>
 
               {/* Category-specific fields */}
-              {selectedCat.id === 'library' && (
-                <FieldGroup label="📚 Library Details" color={catMeta?.color}>
-                  <FormField label="Book Title">
-                    <input className="input" value={form.bookTitle} onChange={e => F('bookTitle', e.target.value)} placeholder="e.g. Introduction to Algorithms" />
+              {selectedCat.id === 'academic' && (
+                <FieldGroup label="📚 Academic Portfolio" color={catMeta?.color}>
+                  <div className="grid grid-cols-3 gap-3">
+                    <FormField label="Attendance %"><input type="number" className="input" value={form.academicAttendance} onChange={e => F('academicAttendance', e.target.value)} placeholder="95" /></FormField>
+                    <FormField label="Classes Attended"><input type="number" className="input" value={form.academicClasses} onChange={e => F('academicClasses', e.target.value)} placeholder="110" /></FormField>
+                    <FormField label="Assignments %"><input type="number" className="input" value={form.assignmentsCompleted} onChange={e => F('assignmentsCompleted', e.target.value)} placeholder="100" /></FormField>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField label="Internal Assessments"><input className="input" value={form.internalAssessments} onChange={e => F('internalAssessments', e.target.value)} placeholder="e.g. 18/20, 19/20" /></FormField>
+                    <FormField label="Semester Results"><input className="input" value={form.semesterResults} onChange={e => F('semesterResults', e.target.value)} placeholder="e.g. 8.5 SGPA" /></FormField>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <FormField label="Projects"><input type="number" className="input" value={form.projectSubmissions} onChange={e => F('projectSubmissions', e.target.value)} placeholder="3" /></FormField>
+                    <FormField label="Presentations"><input type="number" className="input" value={form.presentations} onChange={e => F('presentations', e.target.value)} placeholder="2" /></FormField>
+                    <FormField label="Competitions"><input type="number" className="input" value={form.academicCompetitions} onChange={e => F('academicCompetitions', e.target.value)} placeholder="1" /></FormField>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <FormField label="Viva Performance"><input className="input" value={form.vivaPerformance} onChange={e => F('vivaPerformance', e.target.value)} placeholder="e.g. Excellent" /></FormField>
+                    <FormField label="Research Papers"><input type="number" className="input" value={form.researchActivities} onChange={e => F('researchActivities', e.target.value)} placeholder="0" /></FormField>
+                  </div>
+                </FieldGroup>
+              )}
+
+              {(selectedCat.id === 'learning' || selectedCat.id === 'library') && (
+                <FieldGroup label="📖 Learning & Reading Portfolio" color={catMeta?.color}>
+                  <div className="grid grid-cols-4 gap-3">
+                    <FormField label="Library Visits"><input type="number" className="input" value={form.libraryVisits} onChange={e => F('libraryVisits', e.target.value)} placeholder="184" /></FormField>
+                    <FormField label="Borrowed"><input type="number" className="input" value={form.booksBorrowed} onChange={e => F('booksBorrowed', e.target.value)} placeholder="32" /></FormField>
+                    <FormField label="Completed"><input type="number" className="input" value={form.booksCompleted} onChange={e => F('booksCompleted', e.target.value)} placeholder="10" /></FormField>
+                    <FormField label="Read Hrs"><input type="number" className="input" value={form.readingDuration} onChange={e => F('readingDuration', e.target.value)} placeholder="50" /></FormField>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <FormField label="Tech Books"><input type="number" className="input" value={form.technicalBooks} onChange={e => F('technicalBooks', e.target.value)} placeholder="5" /></FormField>
+                    <FormField label="Non-Fiction"><input type="number" className="input" value={form.nonFictionBooks} onChange={e => F('nonFictionBooks', e.target.value)} placeholder="3" /></FormField>
+                    <FormField label="Research Papers"><input type="number" className="input" value={form.researchPapersRead} onChange={e => F('researchPapersRead', e.target.value)} placeholder="18" /></FormField>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <FormField label="Online Courses"><input type="number" className="input" value={form.onlineCourses} onChange={e => F('onlineCourses', e.target.value)} placeholder="6" /></FormField>
+                    <FormField label="Certifications"><input type="number" className="input" value={form.certifications} onChange={e => F('certifications', e.target.value)} placeholder="9" /></FormField>
+                    <FormField label="Workshops"><input type="number" className="input" value={form.workshops} onChange={e => F('workshops', e.target.value)} placeholder="14" /></FormField>
+                  </div>
+                  <FormField label="Seminars Attended">
+                    <input type="number" className="input" value={form.seminars} onChange={e => F('seminars', e.target.value)} placeholder="5" />
                   </FormField>
-                  <div className="grid grid-cols-2 gap-3">
-                    <FormField label="Author"><input className="input" value={form.author} onChange={e => F('author', e.target.value)} placeholder="e.g. Cormen" /></FormField>
-                    <FormField label="Pages Read"><input type="number" className="input" value={form.pagesRead} onChange={e => F('pagesRead', e.target.value)} placeholder="120" /></FormField>
-                  </div>
-                  <div className="grid grid-cols-2 gap-3">
-                    <FormField label="Topic / Subject"><input className="input" value={form.topic} onChange={e => F('topic', e.target.value)} placeholder="e.g. DSA" /></FormField>
-                    <FormField label="Visit Purpose">
-                      <select className="input" value={form.visitPurpose} onChange={e => F('visitPurpose', e.target.value)}>
-                        {['study', 'research', 'personal growth', 'assignment', 'project'].map(v => <option key={v} value={v}>{v}</option>)}
-                      </select>
-                    </FormField>
-                  </div>
                 </FieldGroup>
               )}
 
@@ -1255,10 +1314,15 @@ function ActivityStats({ activities }) {
   const events    = activities.filter(a => a.category_name === 'events');
   const natEvts   = events.filter(a => ['national', 'international'].some(k => a.details?.eventLevel?.toLowerCase().includes(k)));
   const avgAtt    = (() => {
-    const cls = activities.filter(a => a.category_name === 'classroom' && a.details?.attendancePercent);
-    return cls.length ? Math.round(cls.reduce((s, a) => s + a.details.attendancePercent, 0) / cls.length) : null;
+    const cls = activities.filter(a => (a.category_name === 'classroom' && a.details?.attendancePercent) || (a.category_name === 'academic' && a.details?.academicAttendance));
+    if (!cls.length) return null;
+    return Math.round(cls.reduce((s, a) => s + (a.details.attendancePercent || a.details.academicAttendance), 0) / cls.length);
   })();
   const socialHrs = activities.filter(a => a.category_name === 'social').reduce((s, a) => s + (+a.details?.serviceHours || 0), 0);
+
+  const totalProjects = activities.filter(a => a.category_name === 'academic').reduce((s, a) => s + (a.details?.projectSubmissions || 0), 0);
+  const totalCerts = activities.filter(a => a.category_name === 'learning' || a.category_name === 'library').reduce((s, a) => s + (a.details?.certifications || 0), 0);
+  const booksRead = activities.filter(a => a.category_name === 'learning' || a.category_name === 'library').reduce((s, a) => s + (a.details?.booksCompleted || 0), 0);
 
   const byCat = CATEGORIES.map(cat => ({
     ...cat,
@@ -1278,10 +1342,10 @@ function ActivityStats({ activities }) {
       {/* Key stats — 2 cols mobile, 4 desktop */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
         {[
-          { icon: Library,     label: 'Library Hours',   value: `${libHours}h`,         sub: `${books.length} books`, color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
+          { icon: BookOpen,    label: 'Books Read',      value: booksRead,               sub: 'Total',          color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.2)' },
           { icon: School,      label: 'Avg Attendance',  value: avgAtt ? `${avgAtt}%` : '—', sub: 'Classroom',      color: '#6366f1', bg: 'rgba(99,102,241,0.08)', border: 'rgba(99,102,241,0.2)' },
-          { icon: Dumbbell,    label: 'Sports Training', value: `${sportsHrs}h`,         sub: 'Total hours',           color: '#10b981', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.2)' },
-          { icon: CalendarDays,label: 'Events',          value: events.length,           sub: `${natEvts.length} national`, color: '#ec4899', bg: 'rgba(236,72,153,0.08)', border: 'rgba(236,72,153,0.2)' },
+          { icon: Award,       label: 'Certifications',  value: totalCerts,              sub: 'Total',          color: '#10b981', bg: 'rgba(16,185,129,0.08)', border: 'rgba(16,185,129,0.2)' },
+          { icon: FileText,    label: 'Projects',        value: totalProjects,           sub: 'Academic',       color: '#ec4899', bg: 'rgba(236,72,153,0.08)', border: 'rgba(236,72,153,0.2)' },
         ].map((s, i) => {
           const SIcon = s.icon;
           return (

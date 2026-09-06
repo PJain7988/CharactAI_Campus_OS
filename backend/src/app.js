@@ -18,6 +18,7 @@ const verificationRoutes= require('./routes/verification.routes');
 const aiRoutes          = require('./routes/ai.routes');
 const certificateRoutes = require('./routes/certificate.routes');
 const adminRoutes       = require('./routes/admin.routes');
+const facultyRoutes     = require('./routes/faculty.routes');
 
 const app = express();
 
@@ -108,6 +109,7 @@ app.use('/api/verification', verificationRoutes);
 app.use('/api/ai',           aiLimiter, aiRoutes);
 app.use('/api/certificates', certificateRoutes);
 app.use('/api/admin',        adminRoutes);
+app.use('/api/faculty',      facultyRoutes);
 
 // ── 404 + Global Error Handler ─────────────────────────────────────────────────
 app.use(notFound);

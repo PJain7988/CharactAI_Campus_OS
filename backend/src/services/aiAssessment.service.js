@@ -98,7 +98,18 @@ function bonusForBooksRead(detailsJson) {
  * Core assessment computation.
  */
 function computeAssessment(studentId, opts = {}) {
-  const weights = opts.weights || DEFAULT_DIMENSION_WEIGHTS;
+  let weights = opts.weights || DEFAULT_DIMENSION_WEIGHTS;
+  
+  // Try to load weights from DB
+  try {
+    const wSetting = db.prepare('SELECT value_json FROM system_settings WHERE key = ?').get('ai_dimension_weights');
+    if (wSetting) {
+      weights = { ...weights, ...JSON.parse(wSetting.value_json) };
+    }
+  } catch (e) {
+    // fallback to defaults silently
+  }
+
   const yearFilter = opts.academicYear ? 'AND a.academic_year = ?' : '';
   const params = opts.academicYear ? [studentId, opts.academicYear] : [studentId];
 
@@ -123,11 +134,49 @@ function computeAssessment(studentId, opts = {}) {
     if (act.category_name === 'events') bonus += bonusForEventLevel(act.details_json);
     
     let booksInAct = 0;
+    
+    // Multi-signal verification for Learning/Reading
     if (['library', 'learning'].includes(act.category_name)) {
-      bonus += bonusForBooksRead(act.details_json);
       try {
         const d = JSON.parse(act.details_json || '{}');
-        if (d.bookTitle) booksInAct = 1;
+        // Old schema fallback
+        if (d.bookTitle) {
+          booksInAct = 1;
+          bonus += bonusForBooksRead(act.details_json);
+        }
+        
+        // New structured KPIs
+        if (d.booksCompleted) booksInAct += d.booksCompleted;
+        if (d.certifications) ev.learning_orientation.certs = (ev.learning_orientation.certs || 0) + d.certifications;
+        
+        const visits = d.libraryVisits || 0;
+        const read = (d.booksCompleted || 0) + (d.researchPapersRead || 0);
+        
+        // Multi-signal: Reward visits heavily only if accompanied by actual reading/output
+        if (visits > 0) {
+          if (read > 0) bonus += Math.min(visits, read * 10); // up to 10 productive visits per book
+          else bonus += Math.min(visits, 5); // cap raw visits without output
+        }
+        
+        if (d.certifications) bonus += d.certifications * 15;
+        if (d.onlineCourses) bonus += d.onlineCourses * 10;
+        
+      } catch {}
+    }
+    
+    // Academic KPIs
+    if (act.category_name === 'academic') {
+      try {
+        const d = JSON.parse(act.details_json || '{}');
+        if (d.academicAttendance >= 90) bonus += 20;
+        else if (d.academicAttendance >= 75) bonus += 10;
+        
+        if (d.projectSubmissions) {
+          bonus += d.projectSubmissions * 15;
+          ev.academic_engagement.projects = (ev.academic_engagement.projects || 0) + d.projectSubmissions;
+        }
+        if (d.presentations) bonus += d.presentations * 5;
+        if (d.researchActivities) bonus += d.researchActivities * 25;
       } catch {}
     }
 

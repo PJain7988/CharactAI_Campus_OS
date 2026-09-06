@@ -1,12 +1,19 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShieldCheck, CheckCircle2, XCircle, FileText, UserCircle, Calendar, Tag, Bot } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, XCircle, FileText, UserCircle, Calendar, Tag, Bot, Users } from 'lucide-react';
 import api from '../../api/client';
+import DevelopmentRadar from '../../components/DevelopmentRadar';
+
+const TABS = [
+  { id: 'verification', label: 'Verification Queue', icon: ShieldCheck },
+  { id: 'directory', label: 'Student Directory', icon: Users }
+];
 
 export default function FacultyDashboard() {
   const [pending, setPending] = useState([]);
   const [busyId, setBusyId] = useState(null);
   const [reasonDrafts, setReasonDrafts] = useState({});
+  const [activeTab, setActiveTab] = useState('verification');
 
   const load = useCallback(async () => {
     const { data } = await api.get('/verification/pending');
@@ -71,7 +78,42 @@ export default function FacultyDashboard() {
         </div>
       </motion.div>
 
-      <div className="space-y-4">
+      {/* Tabs Navigation */}
+      <div className="flex space-x-2 border-b overflow-x-auto pb-px scrollbar-hide" style={{ borderColor: 'var(--border)' }}>
+        {TABS.map((tab) => {
+          const isActive = activeTab === tab.id;
+          return (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className="relative flex items-center gap-2 px-5 py-3 text-xs font-bold transition-all whitespace-nowrap rounded-t-xl"
+              style={{
+                color: isActive ? 'var(--text-primary)' : 'var(--text-muted)',
+                background: isActive ? 'var(--bg-card)' : 'transparent',
+                borderTop: isActive ? '1px solid var(--border)' : '1px solid transparent',
+                borderLeft: isActive ? '1px solid var(--border)' : '1px solid transparent',
+                borderRight: isActive ? '1px solid var(--border)' : '1px solid transparent',
+                marginBottom: isActive ? '-1px' : '0'
+              }}
+            >
+              <tab.icon className={`w-4 h-4 ${isActive ? 'text-emerald-400' : ''}`} />
+              {tab.label}
+              {isActive && (
+                <motion.div
+                  layoutId="faculty-active-tab"
+                  className="absolute bottom-[-1px] left-0 right-0 h-[2px] bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]"
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                />
+              )}
+            </button>
+          )
+        })}
+      </div>
+
+      <div className="pt-2">
+        {activeTab === 'verification' && (
+          <div className="space-y-4">
+
         <AnimatePresence>
           {pending.map((a, i) => (
             <motion.div 
@@ -171,15 +213,135 @@ export default function FacultyDashboard() {
           ))}
         </AnimatePresence>
         
-        {pending.length === 0 && (
-          <div className="card flex flex-col justify-center items-center py-20 text-center">
-            <div className="w-24 h-24 rounded-full flex items-center justify-center mb-6 shadow-inner" style={{ background: 'rgba(16,185,129,0.1)', border: '1px solid rgba(16,185,129,0.2)' }}>
-              <ShieldCheck className="w-12 h-12 text-emerald-400" />
-            </div>
-            <h3 className="text-xl font-bold mb-2" style={{ color: 'var(--text-primary)' }}>You're All Caught Up!</h3>
-            <p className="max-w-sm text-sm" style={{ color: 'var(--text-secondary)' }}>There are no pending activities awaiting your verification at this time.</p>
-          </div>
         )}
+      </div>
+        )}
+        
+        {activeTab === 'directory' && <FacultyDirectoryTab />}
+      </div>
+    </div>
+  );
+}
+
+function FacultyDirectoryTab() {
+  const [students, setStudents] = useState([]);
+  const [selectedStudent, setSelectedStudent] = useState(null);
+  
+  const load = () => api.get('/faculty/students').then(({data}) => setStudents(data.students));
+  useEffect(() => { load(); }, []);
+
+  if (selectedStudent) {
+    return <StudentProfileView studentId={selectedStudent} onBack={() => setSelectedStudent(null)} />;
+  }
+
+  return (
+    <div className="card">
+      <h2 className="font-bold text-base mb-6 flex items-center gap-2" style={{ color: 'var(--text-primary)' }}>
+        <Users className="w-5 h-5 text-emerald-400" /> Department Students
+      </h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {students.map(s => (
+          <div key={s.id} onClick={() => setSelectedStudent(s.id)} className="p-5 rounded-2xl border cursor-pointer hover:border-emerald-500/50 transition-colors" style={{ background: 'var(--bg-surface)', borderColor: 'var(--border)' }}>
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl flex items-center justify-center font-black text-lg bg-emerald-500/10 text-emerald-400">
+                {s.name.charAt(0)}
+              </div>
+              <div>
+                <h3 className="font-bold text-sm" style={{ color: 'var(--text-primary)' }}>{s.name}</h3>
+                <p className="text-xs font-mono mb-1" style={{ color: 'var(--text-secondary)' }}>{s.student_code}</p>
+                <span className="text-[10px] uppercase tracking-wider font-bold text-brand-400">{s.program} · Batch {s.batch_year}</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function StudentProfileView({ studentId, onBack }) {
+  const [profile, setProfile] = useState(null);
+
+  useEffect(() => {
+    api.get(`/faculty/students/${studentId}/profile`).then(({data}) => setProfile(data));
+  }, [studentId]);
+
+  if (!profile) return <div className="p-10 text-center animate-pulse">Loading profile...</div>;
+
+  const latestAssessment = profile.assessments?.[0];
+
+  return (
+    <div className="space-y-6">
+      <button onClick={onBack} className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+        ← Back to Directory
+      </button>
+
+      <div className="card flex items-center gap-6">
+        <div className="w-20 h-20 rounded-2xl flex items-center justify-center font-black text-3xl bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+          {profile.student.name.charAt(0)}
+        </div>
+        <div>
+          <h2 className="text-2xl font-black mb-1" style={{ color: 'var(--text-primary)' }}>{profile.student.name}</h2>
+          <div className="flex gap-4 text-xs font-medium" style={{ color: 'var(--text-muted)' }}>
+            <span>Roll: <strong className="font-mono">{profile.student.student_code}</strong></span>
+            <span>Program: <strong>{profile.student.program}</strong></span>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid md:grid-cols-2 gap-6">
+        <div className="card">
+          <h3 className="font-bold text-base mb-6" style={{ color: 'var(--text-primary)' }}>Development Radar</h3>
+          {latestAssessment ? (
+            <div className="h-[300px]">
+              <DevelopmentRadar scores={latestAssessment.scores} />
+            </div>
+          ) : (
+            <p className="text-sm text-slate-500 text-center py-10">No AI assessment generated yet.</p>
+          )}
+        </div>
+
+        <div className="card">
+          <h3 className="font-bold text-base mb-6" style={{ color: 'var(--text-primary)' }}>Log Achievement</h3>
+          <p className="text-xs mb-4" style={{ color: 'var(--text-muted)' }}>Directly log an approved achievement for this student to bypass verification.</p>
+          
+          <form onSubmit={(e) => {
+            e.preventDefault();
+            const form = e.target;
+            api.post('/faculty/activities', {
+              student_id: studentId,
+              title: form.title.value,
+              category_id: form.category.value,
+              activity_date: form.date.value,
+              academic_year: 1,
+              duration_hours: 2,
+              achievement: form.achievement.value
+            }).then(() => {
+              alert('Achievement logged successfully!');
+              form.reset();
+            });
+          }} className="space-y-4">
+            <div>
+              <label className="label">Activity Title</label>
+              <input name="title" className="input" required placeholder="e.g., Department Hackathon" />
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="label">Category ID (UUID)</label>
+                <input name="category" className="input" required placeholder="Enter Category UUID" />
+              </div>
+              <div>
+                <label className="label">Date</label>
+                <input name="date" type="date" className="input" required />
+              </div>
+            </div>
+            <div>
+              <label className="label">Achievement / Role</label>
+              <input name="achievement" className="input" required placeholder="e.g., Winner, 1st Place" />
+            </div>
+            <button type="submit" className="btn w-full bg-emerald-500 text-white font-bold py-2 shadow-lg">Log Verified Achievement</button>
+          </form>
+        </div>
       </div>
     </div>
   );

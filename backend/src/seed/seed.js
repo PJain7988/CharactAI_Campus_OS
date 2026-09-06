@@ -254,8 +254,8 @@ async function seed() {
       DELETE FROM interview_answers; DELETE FROM interviews; DELETE FROM candidate_matches;
       DELETE FROM resumes; DELETE FROM jobs; DELETE FROM companies; DELETE FROM question_bank;
       DELETE FROM certificates; DELETE FROM ai_assessments; DELETE FROM notifications;
-      DELETE FROM activities; DELETE FROM activity_categories; DELETE FROM students;
-      DELETE FROM audit_logs; DELETE FROM users;
+      DELETE FROM activities; DELETE FROM global_events; DELETE FROM activity_categories; DELETE FROM students;
+      DELETE FROM audit_logs; DELETE FROM users; DELETE FROM system_settings;
     `);
   });
   tx();
@@ -268,6 +268,19 @@ async function seed() {
     categoryIds[c.name] = id;
     insertCategory.run(id, c.name, c.description);
   });
+
+  // System Settings (AI Weights)
+  const defaultWeights = {
+    academic: 14, technical: 13, learning: 10, classroom: 10,
+    leadership: 10, discipline: 9, teamwork: 8, sports: 7,
+    events: 6, creativity: 5, social: 5, extracurricular: 3
+  };
+  db.prepare('INSERT INTO system_settings (key, value_json) VALUES (?, ?)').run('ai_dimension_weights', JSON.stringify(defaultWeights));
+
+  // Sample Global Event
+  db.prepare('INSERT INTO global_events (id, title, description, event_date, location, category_id) VALUES (?, ?, ?, ?, ?, ?)').run(
+    uuidv4(), 'Annual Tech Symposium 2026', 'College-wide tech fest', '2026-10-15', 'Main Auditorium', categoryIds['technical']
+  );
 
   // Question bank
   const insertQ = db.prepare('INSERT INTO question_bank (id, topic, difficulty, question, expected_concepts_json) VALUES (?, ?, ?, ?, ?)');
